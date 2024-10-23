@@ -183,7 +183,7 @@ local function updateStage(stage)
 				length = note.millisecond
 			end
 		end
-		length += 6000
+		length += 9000
 		stage:SetAttribute(Constants.Attributes.Stage.Status, "Playing")
 		for _, player in players do
 			eventsFolder.StageStartSong:FireClient(player, chosenSong, stage)
@@ -241,6 +241,7 @@ local function updateStage(stage)
 		activePreviews[player] = nil
 		activeSongs[player] = nil
 	end
+	stage.SongInfo.SurfaceGui.TextLabel.Text = `<Song Title> by <Artist> // <Mappers>`
 end
 local function init()
 	eventsFolder.UpdateStagePreview.OnServerEvent:Connect(function(player, updateData)

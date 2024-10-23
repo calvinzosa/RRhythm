@@ -152,9 +152,7 @@ export type UIStatsContainer = Frame & {
 		Accuracy: TextLabel;
 		HitError: TextLabel;
 		HighestCombo: TextLabel;
-		MaxCombo: TextLabel;
 		TotalScore: TextLabel;
-		MaxScore: TextLabel;
 	};
 	Close: TextButton & {
 		UIPadding: UIPadding;

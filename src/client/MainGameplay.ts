@@ -41,13 +41,14 @@ const averageError = [0, 0];
 const allHitErrors = [[] as number[], [] as number[]];
 const hitPositions = [0, 0, 0, 0];
 
+let devAutoPlay = false;
 let originalCameraCFrame: CFrame = CFrame.identity;
 let bindedKeys = [Enum.KeyCode.Q, Enum.KeyCode.W, Enum.KeyCode.LeftBracket, Enum.KeyCode.RightBracket];
-let totalLanes = 4;
 let laneWidth = 75;
 let lanePadding = 1;
-let noteSpeed = 10;
+let noteSpeed = 0;
 let selectedNoteSkin = 'CirclesV1';
+let maxVisibleNotes = 200;
 
 let accuracyFormat = '<stroke thickness="2" color="#000" joins="miter"><b>%s</b></stroke>';
 let comboFormat = '<stroke thickness="2" color="#000" joins="miter"><b>%d</b></stroke>';
@@ -66,6 +67,12 @@ let bpm = 0;
 let scrollSpeed = 0;
 let endTime = 0;
 let isPlaying = false;
+
+if (RunService.IsStudio()) {
+	const toggleAutoplay = new UserInput.Hotkey('ToggleAutoplay', Enum.KeyCode.M);
+	
+	toggleAutoplay.onPress(() => devAutoPlay = !devAutoPlay);
+}
 
 export function calculateAccuracy(nMax: number, n300: number, n200: number, n100: number, n50: number, nMiss: number): number {
 	// Same as osu!mania's accuracy formula
@@ -404,6 +411,8 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 		for (const frame of laneFrames) frame.Destroy();
 		laneFrames.clear();
 		
+		const totalLanes = chart.metadata.totalLanes;
+		
 		screenGui.Transition.Size = new UDim2(0, 0, 1, 0);
 		screenGui.Transition.Position = new UDim2(0, 0, 0, 0);
 		screenGui.Transition.AnchorPoint = new Vector2(0, 0);
@@ -425,7 +434,6 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 		
 		totalScore = 0;
 		maxScore = chart.notes.size() * 300;
-		totalLanes = chart.metadata.totalLanes;
 		
 		notesMax = 0; // Marvelous
 		notes300 = 0; // Perfect
@@ -467,7 +475,7 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 			
 			const hotkey = new UserInput.Hotkey(`Lane${i}`, bindedKeys[i - 1]);
 			
-			if (autoplay) hotkey.canPress = false;
+			if (autoplay || devAutoPlay) hotkey.canPress = false;
 			hotkey.onPress(() => laneOnPress(lane, startTime, i, createdNotes));
 			hotkey.onRelease(() => laneOnRelease(lane, i, startTime, createdNotes));
 			
@@ -556,6 +564,10 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 		} catch (err) {  }
 		
 		RunService.BindToRenderStep('GameplayUpdate', Enum.RenderPriority.Last.Value, (dt) => {
+			for (const hotkey of laneHotkeys) {
+				if (autoplay || devAutoPlay) hotkey.canPress = false;
+			}
+			
 			const currentTime = os.clock();
 			const elapsedTime = math.floor((currentTime - startTime) * 1000);
 			
@@ -583,12 +595,10 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 			
 			if (elapsedTime >= 0) {
 				if (heldNotes.size() === 0) {
-					if (createdNotes.size() === 0) {
+					if (createdNotes.size() === 0 || !music.IsPlaying) {
 						RunService.UnbindFromRenderStep('GameplayUpdate');
 						
-						task.delay(1, async () => {
-							resolve(await finish());
-						});
+						task.delay(4, async () => resolve(await finish()));
 						
 						return;
 					}
@@ -598,7 +608,7 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 			let totalRemoves = 0;
 			
 			for (const [, noteData] of ipairs(heldNotes)) {
-				if (totalRemoves >= 100) break;
+				if (createdNotes.size() >= maxVisibleNotes) break;
 				
 				const hitPosition = hitPositions[noteData.lane];
 				const laneHeight = laneFrames[noteData.lane].AbsoluteSize.Y;
@@ -706,7 +716,7 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 				const hitOffset = noteData.millisecond - elapsedTime;
 				const hitPercentage = hitOffset > 0 ? hitOffset / maxAccuracy : hitOffset / minAccuracy;
 				
-				if (autoplay && hitPercentage <= 0.1) {
+				if ((autoplay || devAutoPlay) && hitPercentage <= 0.1) {
 					const hotkey = laneHotkeys[noteData.lane];
 					
 					if (noteData.type === 0) {
@@ -763,7 +773,7 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 				
 				if ((!noteObject.isHoldNote && !noteObject.isTailNote) || (noteObject.isTailNote && noteObject.holdNote?.isReleased)) {
 					if (elapsedTime >= noteData.millisecond + maxAccuracy) {
-						if (autoplay) laneHotkeys[noteData.lane].release();
+						if (autoplay || devAutoPlay) laneHotkeys[noteData.lane].release();
 						
 						let doMiss = true;
 						if (noteObject.isTailNote && noteObject.holdNote !== undefined) {
@@ -855,7 +865,7 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 				screenGui.DebugHUD.PressedNotes.Text = `PressedNotes: ${pressedNotes.join(',')}`;
 				screenGui.DebugHUD.HitPosition.Text = string.format('HitPosition: %s', hitPositions.join(','));
 				screenGui.DebugHUD.AverageError.Text = string.format('AvgHitErr: %dms,%dms', averageError[0], averageError[1]);
-				screenGui.DebugHUD.Autoplay.Text = `Autoplay: ${autoplay}`;
+				screenGui.DebugHUD.Autoplay.Text = `Autoplay: ${autoplay || devAutoPlay}`;
 				screenGui.DebugHUD.NoteSkin.Text = `NoteSkin: ${selectedNoteSkin}`;
 				screenGui.DebugHUD.FPS.Text = string.format('FPS: %.2f', 1 / dt);
 			}
@@ -981,11 +991,9 @@ export function showGrade(chart: Types.Chart, totalScore: number, notesMax: numb
 	screenGui.StatsContainer.Content.Bad.Text = `Bad: ${Utils.formatNumber(notes50)}`;
 	screenGui.StatsContainer.Content.Misses.Text = `Misses: ${Utils.formatNumber(notesMisses)}`;
 	screenGui.StatsContainer.Content.Accuracy.Text = `Accuracy: ${string.format('%.3f', accuracy)}%`;
-	screenGui.StatsContainer.Content.HitError.Text = `Error: +${string.format('%.1f', math.abs(maxError))}ms, -${string.format('%.1f', math.abs(minError))}ms`;
-	screenGui.StatsContainer.Content.HighestCombo.Text = `Highest Combo: ${Utils.formatNumber(highestCombo)}x`;
-	screenGui.StatsContainer.Content.MaxCombo.Text = `Highest Combo: ${Utils.formatNumber(maxCombo)}x`;
-	screenGui.StatsContainer.Content.TotalScore.Text = `Total Score: ${Utils.formatNumber(totalScore)}`;
-	screenGui.StatsContainer.Content.MaxScore.Text = `Max Score: ${Utils.formatNumber(maxScore)}`;
+	screenGui.StatsContainer.Content.HitError.Text = `Avg. Hit Error: +${string.format('%.1f', math.abs(maxError))}ms, -${string.format('%.1f', math.abs(minError))}ms`;
+	screenGui.StatsContainer.Content.HighestCombo.Text = `Highest Combo: ${Utils.formatNumber(highestCombo)}x / ${Utils.formatNumber(maxCombo)}x`;
+	screenGui.StatsContainer.Content.TotalScore.Text = `Total Score: ${Utils.formatNumber(totalScore)} / ${Utils.formatNumber(maxScore)}`;
 	
 	screenGui.StatsContainer.Position = new UDim2(-0.99, 0, 0.5, 0);
 	screenGui.StatsContainer.Visible = true;
@@ -1210,6 +1218,8 @@ export function updatePreview(preview: Types.StagePreview, songFolder: Folder, u
 			};
 		}
 	}
+	
+	const totalLanes = chart.metadata.totalLanes;
 	
 	const laneFrames = preview.SurfaceGui.Lanes.GetChildren() as Types.UILane[];
 	const usedArrows = new Set<Types.UINote>();

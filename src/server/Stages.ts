@@ -178,7 +178,7 @@ export function updateStage(stage: Types.StageModel) {
 			if (note.millisecond > length) length = note.millisecond;
 		}
 		
-		length += 6000;
+		length += 9000;
 		
 		stage.SetAttribute(Constants.Attributes.Stage.Status, 'Playing');
 		
@@ -223,6 +223,8 @@ export function updateStage(stage: Types.StageModel) {
 		activePreviews.delete(player);
 		activeSongs.delete(player);
 	}
+	
+	stage.SongInfo.SurfaceGui.TextLabel.Text = `<Song Title> by <Artist> // <Mappers>`;
 }
 
 export function init() {

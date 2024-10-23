@@ -32,13 +32,14 @@ local laneFrames = {}
 local averageError = { 0, 0 }
 local allHitErrors = { {}, {} }
 local hitPositions = { 0, 0, 0, 0 }
+local devAutoPlay = false
 local originalCameraCFrame = CFrame.identity
 local bindedKeys = { Enum.KeyCode.Q, Enum.KeyCode.W, Enum.KeyCode.LeftBracket, Enum.KeyCode.RightBracket }
-local totalLanes = 4
 local laneWidth = 75
 local lanePadding = 1
-local noteSpeed = 10
+local noteSpeed = 0
 local selectedNoteSkin = "CirclesV1"
+local maxVisibleNotes = 200
 local accuracyFormat = '<stroke thickness="2" color="#000" joins="miter"><b>%s</b></stroke>'
 local comboFormat = '<stroke thickness="2" color="#000" joins="miter"><b>%d</b></stroke>'
 local totalScore = 0
@@ -55,6 +56,13 @@ local bpm = 0
 local scrollSpeed = 0
 local endTime = 0
 local isPlaying = false
+if RunService:IsStudio() then
+	local toggleAutoplay = UserInput.Hotkey.new("ToggleAutoplay", Enum.KeyCode.M)
+	toggleAutoplay:onPress(function()
+		devAutoPlay = not devAutoPlay
+		return devAutoPlay
+	end)
+end
 local function calculateAccuracy(nMax, n300, n200, n100, n50, nMiss)
 	-- Same as osu!mania's accuracy formula
 	local accuracy = (300 * (nMax + n300) + 200 * n200 + 100 * n100 + 50 * n50) / (300 * (nMax + n300 + n200 + n100 + n50 + nMiss))
@@ -383,7 +391,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			finish()
 		end
 		isPlaying = true
-		print("[src/client/MainGameplay.ts:361]", "Initializing gameplay...")
+		print("[src/client/MainGameplay.ts:368]", "Initializing gameplay...")
 		local selectedSkinFolder = skinsFolder:WaitForChild(selectedNoteSkin, 5)
 		if not selectedSkinFolder then
 			selectedSkinFolder = skinsFolder:WaitForChild("Circles V1")
@@ -405,7 +413,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 					}
 				end
 			end, function(err)
-				warn("[src/client/MainGameplay.ts:384]", `Error while parsing sub key folder '{subKeyFolder}' - {err}`)
+				warn("[src/client/MainGameplay.ts:391]", `Error while parsing sub key folder '{subKeyFolder}' - {err}`)
 			end)
 		end
 		for i = 1, chart.metadata.totalLanes do
@@ -428,6 +436,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			frame:Destroy()
 		end
 		table.clear(laneFrames)
+		local totalLanes = chart.metadata.totalLanes
 		screenGui.Transition.Size = UDim2.new(0, 0, 1, 0)
 		screenGui.Transition.Position = UDim2.new(0, 0, 0, 0)
 		screenGui.Transition.AnchorPoint = Vector2.new(0, 0)
@@ -435,7 +444,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			Size = UDim2.new(1, 0, 1, 0),
 		}):Play()
 		task.wait(1)
-		print("[src/client/MainGameplay.ts:417]", "Finished transition")
+		print("[src/client/MainGameplay.ts:426]", "Finished transition")
 		averageError[1] = 0
 		averageError[2] = 0
 		table.clear(allHitErrors[1])
@@ -443,7 +452,6 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 		table.clear(hitPositions)
 		totalScore = 0
 		maxScore = #chart.notes * 300
-		totalLanes = chart.metadata.totalLanes
 		notesMax = 0
 		notes300 = 0
 		notes200 = 0
@@ -479,7 +487,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			lane.Parent = screenGui.Lanes
 			table.insert(laneFrames, lane)
 			local hotkey = UserInput.Hotkey.new(`Lane{i}`, bindedKeys[i])
-			if autoplay then
+			if autoplay or devAutoPlay then
 				hotkey.canPress = false
 			end
 			hotkey:onPress(function()
@@ -491,7 +499,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			table.insert(laneHotkeys, hotkey)
 		end
 		screenGui.Lanes.Visible = true
-		print("[src/client/MainGameplay.ts:479]", `Created {totalLanes} lanes and binded {#laneHotkeys} keys`)
+		print("[src/client/MainGameplay.ts:487]", `Created {totalLanes} lanes and binded {#laneHotkeys} keys`)
 		startTime = os.clock() + 4
 		local countdown = 3
 		local heldNotes = {}
@@ -511,7 +519,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 		end)
 		for i, note in ipairs(chart.notes) do
 			if note.lane < 0 or note.lane >= totalLanes then
-				warn("[src/client/MainGameplay.ts:501]", `> Note #{i} is not in a valid lane ({note.lane}), the mininum is 0 and the maximum is {totalLanes - 1}`)
+				warn("[src/client/MainGameplay.ts:509]", `> Note #{i} is not in a valid lane ({note.lane}), the mininum is 0 and the maximum is {totalLanes - 1}`)
 				continue
 			end
 			if note.type == 0 then
@@ -547,7 +555,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			_condition_1 = 1
 		end
 		scrollSpeed = _condition_1
-		print("[src/client/MainGameplay.ts:528]", `Loaded {#heldNotes} notes, {#heldTimings} timings, and {#heldEvents} events in {string.format("%.4f", (os.clock() - loadStartTime) / 1000)}ms`)
+		print("[src/client/MainGameplay.ts:536]", `Loaded {#heldNotes} notes, {#heldTimings} timings, and {#heldEvents} events in {string.format("%.4f", (os.clock() - loadStartTime) / 1000)}ms`)
 		TS.try(function()
 			RunService:UnbindFromRenderStep("GameplayUpdate")
 		end, function(err) end)
@@ -562,12 +570,17 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 		camera.CameraType = Enum.CameraType.Scriptable
 		camera.CFrame = stage.Camera.CFrame
 		task.wait(1)
-		print("[src/client/MainGameplay.ts:550]", "Finished second transition")
+		print("[src/client/MainGameplay.ts:558]", "Finished second transition")
 		local lastPreviewUpdateTime = os.clock()
 		TS.try(function()
 			eventsFolder.UpdateStagePreview:FireServer(Compression:compress(`0,nan,0,0,{bpm},{scrollSpeed}|`))
 		end, function(err) end)
 		RunService:BindToRenderStep("GameplayUpdate", Enum.RenderPriority.Last.Value, function(dt)
+			for _, hotkey in laneHotkeys do
+				if autoplay or devAutoPlay then
+					hotkey.canPress = false
+				end
+			end
 			local currentTime = os.clock()
 			local elapsedTime = math.floor((currentTime - startTime) * 1000)
 			-- scrollSpeed = 1;
@@ -589,10 +602,10 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			end
 			if elapsedTime >= 0 then
 				if #heldNotes == 0 then
-					if #createdNotes == 0 then
+					if #createdNotes == 0 or not music.IsPlaying then
 						RunService:UnbindFromRenderStep("GameplayUpdate")
-						task.delay(1, TS.async(function()
-							resolve(TS.await(finish()))
+						task.delay(4, TS.async(function()
+							return resolve(TS.await(finish()))
 						end))
 						return nil
 					end
@@ -602,7 +615,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			end
 			local totalRemoves = 0
 			for _, noteData in ipairs(heldNotes) do
-				if totalRemoves >= 100 then
+				if #createdNotes >= maxVisibleNotes then
 					break
 				end
 				local hitPosition = hitPositions[noteData.lane + 1]
@@ -709,7 +722,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 				local yOffset = calculateYPosition(elapsedTime, noteData, noteSpeed, bpm, scrollSpeed, laneHeight, hitPosition, heldTimings)
 				local hitOffset = noteData.millisecond - elapsedTime
 				local hitPercentage = if hitOffset > 0 then hitOffset / maxAccuracy else hitOffset / minAccuracy
-				if autoplay and hitPercentage <= 0.1 then
+				if (autoplay or devAutoPlay) and hitPercentage <= 0.1 then
 					local hotkey = laneHotkeys[noteData.lane + 1]
 					if noteData.type == 0 then
 						hotkey:release()
@@ -784,7 +797,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 				end
 				if _condition_2 then
 					if elapsedTime >= noteData.millisecond + maxAccuracy then
-						if autoplay then
+						if autoplay or devAutoPlay then
 							laneHotkeys[noteData.lane + 1]:release()
 						end
 						local doMiss = true
@@ -891,19 +904,19 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 				screenGui.DebugHUD.PressedNotes.Text = `PressedNotes: {table.concat(pressedNotes, ",")}`
 				screenGui.DebugHUD.HitPosition.Text = string.format("HitPosition: %s", table.concat(hitPositions, ","))
 				screenGui.DebugHUD.AverageError.Text = string.format("AvgHitErr: %dms,%dms", averageError[1], averageError[2])
-				screenGui.DebugHUD.Autoplay.Text = `Autoplay: {autoplay}`
+				screenGui.DebugHUD.Autoplay.Text = `Autoplay: {autoplay or devAutoPlay}`
 				screenGui.DebugHUD.NoteSkin.Text = `NoteSkin: {selectedNoteSkin}`
 				screenGui.DebugHUD.FPS.Text = string.format("FPS: %.2f", 1 / dt)
 			end
 			camera.CameraType = Enum.CameraType.Scriptable
 			camera.CFrame = stage.Camera.CFrame
 		end)
-		print("[src/client/MainGameplay.ts:867]", "Binded main gameplay loop")
+		print("[src/client/MainGameplay.ts:877]", "Binded main gameplay loop")
 	end)
 end
 function finish()
 	return TS.Promise.new(function(resolve)
-		print("[src/client/MainGameplay.ts:873]", "Finishing gameplay...")
+		print("[src/client/MainGameplay.ts:883]", "Finishing gameplay...")
 		TS.try(function()
 			RunService:UnbindFromRenderStep("GameplayUpdate")
 		end, function(err) end)
@@ -932,7 +945,7 @@ function finish()
 		end
 		Utils.destroyAfter(laneFrames, info.Time)
 		table.clear(laneFrames)
-		print("[src/client/MainGameplay.ts:915]", "Cleared lanes")
+		print("[src/client/MainGameplay.ts:925]", "Cleared lanes")
 		isPlaying = false
 		TweenService:Create(screenGui.ComboCounter, info, {
 			GroupTransparency = 1,
@@ -954,7 +967,7 @@ function finish()
 		local _uDim2_1 = UDim2.new(-2, 0, 0, 0)
 		_object_1[_left_1] = _position_1 + _uDim2_1
 		TweenService:Create(_exp_1, info, _object_1):Play()
-		print("[src/client/MainGameplay.ts:935]", "Cleared UI")
+		print("[src/client/MainGameplay.ts:945]", "Cleared UI")
 		task.wait(info.Time)
 		if not isPlaying then
 			screenGui.Lanes.Visible = false
@@ -1001,11 +1014,9 @@ local function showGrade(chart, totalScore, notesMax, notes300, notes200, notes1
 	screenGui.StatsContainer.Content.Bad.Text = `Bad: {Utils.formatNumber(notes50)}`
 	screenGui.StatsContainer.Content.Misses.Text = `Misses: {Utils.formatNumber(notesMisses)}`
 	screenGui.StatsContainer.Content.Accuracy.Text = `Accuracy: {string.format("%.3f", accuracy)}%`
-	screenGui.StatsContainer.Content.HitError.Text = `Error: +{string.format("%.1f", math.abs(maxError))}ms, -{string.format("%.1f", math.abs(minError))}ms`
-	screenGui.StatsContainer.Content.HighestCombo.Text = `Highest Combo: {Utils.formatNumber(highestCombo)}x`
-	screenGui.StatsContainer.Content.MaxCombo.Text = `Highest Combo: {Utils.formatNumber(maxCombo)}x`
-	screenGui.StatsContainer.Content.TotalScore.Text = `Total Score: {Utils.formatNumber(totalScore)}`
-	screenGui.StatsContainer.Content.MaxScore.Text = `Max Score: {Utils.formatNumber(maxScore)}`
+	screenGui.StatsContainer.Content.HitError.Text = `Avg. Hit Error: +{string.format("%.1f", math.abs(maxError))}ms, -{string.format("%.1f", math.abs(minError))}ms`
+	screenGui.StatsContainer.Content.HighestCombo.Text = `Highest Combo: {Utils.formatNumber(highestCombo)}x / {Utils.formatNumber(maxCombo)}x`
+	screenGui.StatsContainer.Content.TotalScore.Text = `Total Score: {Utils.formatNumber(totalScore)} / {Utils.formatNumber(maxScore)}`
 	screenGui.StatsContainer.Position = UDim2.new(-0.99, 0, 0.5, 0)
 	screenGui.StatsContainer.Visible = true
 	local infoOut = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -1237,6 +1248,7 @@ local function updatePreview(preview, songFolder, updateData, chart)
 			}
 		end
 	end
+	local totalLanes = chart.metadata.totalLanes
 	local laneFrames = preview.SurfaceGui.Lanes:GetChildren()
 	local usedArrows = {}
 	local laneHolds = {}
