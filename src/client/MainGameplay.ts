@@ -11,8 +11,8 @@ import { $dbg, $print, $warn } from 'rbxts-transform-debug';
 
 import * as UserInput from 'client/UserInput';
 import * as Types from 'shared/Types';
-import * as Constants from 'shared/Constants';
 import * as Utils from 'shared/Utils';
+import { Constants } from 'shared/Constants';
 import LZWCompression from 'shared/LZWCompression';
 
 const Compression = new LZWCompression();

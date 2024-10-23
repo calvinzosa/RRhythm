@@ -7,7 +7,7 @@ import StringUtils from '@rbxts/string-utils';
 import { $print, $warn } from 'rbxts-transform-debug';
 
 import * as Types from 'shared/Types';
-import * as Constants from 'shared/Constants';
+import { Constants } from 'shared/Constants';
 
 function mapNumbers(number: string) {
 	return tonumber(number) ?? 0;
