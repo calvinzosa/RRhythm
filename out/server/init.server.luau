@@ -5,12 +5,12 @@ local ReplicatedStorage = _services.ReplicatedStorage
 local Workspace = _services.Workspace
 local Types = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Types")
 local Stages = TS.import(script, game:GetService("ServerScriptService"), "Server", "Stages")
-local Attributes = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Constants").Attributes
+local Constants = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Constants").Constants
 local eventsFolder = ReplicatedStorage:WaitForChild("Events")
 local stagesFolder = Workspace:WaitForChild("Stages")
 for _, stageType in stagesFolder:GetChildren() do
 	for _1, stage in stageType:GetChildren() do
-		stage:SetAttribute(Attributes.Stage.Status, "Waiting")
+		stage:SetAttribute(Constants.Attributes.Stage.Status, "Waiting")
 	end
 end
 Stages.init()
@@ -52,7 +52,7 @@ eventsFolder.JoinStage.OnServerEvent:Connect(function(player, stage, playerNumbe
 	if not character or not rootPart or not rootAttachment then
 		return nil
 	end
-	if stage:GetAttribute(Attributes.Stage.Status) ~= "Waiting" then
+	if stage:GetAttribute(Constants.Attributes.Stage.Status) ~= "Waiting" then
 		return nil
 	end
 	print("[src/server/index.server.ts:30]", `Attaching {player.Name} to '{stage.Parent.Name}' stage as Player{playerNumber}`)

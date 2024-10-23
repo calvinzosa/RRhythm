@@ -4,7 +4,7 @@ local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts
 local Players = _services.Players
 local ReplicatedStorage = _services.ReplicatedStorage
 local Workspace = _services.Workspace
-local Attributes = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Constants").Attributes
+local Constants = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Constants").Constants
 local Types = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Types")
 local OsuBeatmapConverter = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "OsuBeatmapConverter")
 local Gameplay = TS.import(script, script, "MainGameplay")
@@ -21,7 +21,7 @@ local function promptTriggered(prompt, stage, playerNumber)
 	if not player.Character then
 		return nil
 	end
-	if player.Character:GetAttribute(Attributes.Character.IsAttachedStage) ~= nil then
+	if player.Character:GetAttribute(Constants.Attributes.Character.IsAttachedStage) ~= nil then
 		local _result = stage.Parent
 		if _result ~= nil then
 			_result = _result.Name
@@ -82,7 +82,7 @@ end);
 	Gameplay.showGrade(chart, unpack(stats))
 end));
 (eventsFolder:WaitForChild("UpdateStagePreview")).OnClientEvent:Connect(function(preview, updateData, module)
-	local _value = preview:GetAttribute(Attributes.StagePreview.IsOngoing)
+	local _value = preview:GetAttribute(Constants.Attributes.StagePreview.IsOngoing)
 	if not (_value ~= 0 and _value == _value and _value ~= "" and _value) then
 		return nil
 	end
@@ -100,8 +100,8 @@ end));
 end);
 (eventsFolder:WaitForChild("EndStagePreview")).OnClientEvent:Connect(function(preview)
 	preview.SurfaceGui.Lanes:ClearAllChildren()
-	preview:SetAttribute(Attributes.StagePreview.IsOngoing, nil)
+	preview:SetAttribute(Constants.Attributes.StagePreview.IsOngoing, nil)
 end);
 (eventsFolder:WaitForChild("StartStagePreview")).OnClientEvent:Connect(function(preview)
-	preview:SetAttribute(Attributes.StagePreview.IsOngoing, true)
+	preview:SetAttribute(Constants.Attributes.StagePreview.IsOngoing, true)
 end)

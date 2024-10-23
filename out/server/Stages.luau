@@ -4,7 +4,7 @@ local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts
 local Players = _services.Players
 local ReplicatedStorage = _services.ReplicatedStorage
 local LZWCompression = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "LZWCompression").default
-local Attributes = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Constants").Attributes
+local Constants = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Constants").Constants
 local Types = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Types")
 local Compression = LZWCompression.new()
 local eventsFolder = ReplicatedStorage:WaitForChild("Events")
@@ -12,31 +12,31 @@ local selectedPlayerSongs = {}
 local activePreviews = {}
 local activeSongs = {}
 local function attachPlayer(player, character, rootPart, rootAttachment, playerNumber, stage)
-	if stage:GetAttribute(Attributes.Stage.Status) ~= "Waiting" then
+	if stage:GetAttribute(Constants.Attributes.Stage.Status) ~= "Waiting" then
 		return nil
 	end
 	local stagePlayer = stage:FindFirstChild(`Player{playerNumber}`)
 	if not stagePlayer then
 		return nil
 	end
-	if character:GetAttribute(Attributes.Character.IsAttachedStage) == nil then
+	if character:GetAttribute(Constants.Attributes.Character.IsAttachedStage) == nil then
 		stagePlayer.Trigger.Enabled = false
 		stagePlayer.RigidConstraint.Attachment1 = rootAttachment
 		stagePlayer.Character.Value = character
 		local _result = player.Character
 		if _result ~= nil then
-			_result:SetAttribute(Attributes.Character.StagePlayerNumber, playerNumber)
+			_result:SetAttribute(Constants.Attributes.Character.StagePlayerNumber, playerNumber)
 		end
-		character:SetAttribute(Attributes.Character.IsAttachedStage, true)
+		character:SetAttribute(Constants.Attributes.Character.IsAttachedStage, true)
 	else
 		stagePlayer.Trigger.Enabled = true
 		stagePlayer.RigidConstraint.Attachment1 = nil
 		stagePlayer.Character.Value = nil
 		local _result = player.Character
 		if _result ~= nil then
-			_result:SetAttribute(Attributes.Character.StagePlayerNumber, nil)
+			_result:SetAttribute(Constants.Attributes.Character.StagePlayerNumber, nil)
 		end
-		character:SetAttribute(Attributes.Character.IsAttachedStage, nil)
+		character:SetAttribute(Constants.Attributes.Character.IsAttachedStage, nil)
 	end
 end
 local function selectSong(player, song)
@@ -86,7 +86,7 @@ local function updateStage(stage)
 	if #players == 0 then
 		return print("[src/server/Stages.ts:76]", "no players")
 	end
-	stage:SetAttribute(Attributes.Stage.Status, "Choosing")
+	stage:SetAttribute(Constants.Attributes.Stage.Status, "Choosing")
 	for _, player in players do
 		eventsFolder.StartSongSelection:FireClient(player)
 	end
@@ -108,7 +108,7 @@ local function updateStage(stage)
 		local song = selectedPlayerSongs[player]
 		if song == "<Exit>" then
 			print("[src/server/Stages.ts:103]", "Exiting stage")
-			stage:SetAttribute(Attributes.Stage.Status, "Waiting")
+			stage:SetAttribute(Constants.Attributes.Stage.Status, "Waiting")
 			for _1, otherPlayer in players do
 				selectedPlayerSongs[otherPlayer] = nil
 				local character = otherPlayer.Character
@@ -122,8 +122,8 @@ local function updateStage(stage)
 					_result_2 = _result_2:FindFirstChild("RootAttachment")
 				end
 				local rootAttachment = _result_2
-				if character and rootPart and rootAttachment and character:GetAttribute(Attributes.Character.IsAttachedStage) == true then
-					local _condition = character:GetAttribute(Attributes.Character.StagePlayerNumber)
+				if character and rootPart and rootAttachment and character:GetAttribute(Constants.Attributes.Character.IsAttachedStage) == true then
+					local _condition = character:GetAttribute(Constants.Attributes.Character.StagePlayerNumber)
 					if _condition == nil then
 						_condition = 1
 					end
@@ -155,7 +155,7 @@ local function updateStage(stage)
 			if not character then
 				continue
 			end
-			local _condition = character:GetAttribute(Attributes.Character.StagePlayerNumber)
+			local _condition = character:GetAttribute(Constants.Attributes.Character.StagePlayerNumber)
 			if _condition == nil then
 				_condition = 1
 			end
@@ -163,7 +163,7 @@ local function updateStage(stage)
 			local preview = stage:FindFirstChild(`Preview{playerNumber}`)
 			if preview ~= nil then
 				eventsFolder.StartStagePreview:FireAllClients(preview)
-				preview:SetAttribute(Attributes.StagePreview.IsOngoing, true)
+				preview:SetAttribute(Constants.Attributes.StagePreview.IsOngoing, true)
 				activeSongs[player] = chart
 				local _arg1 = {
 					preview = preview,
@@ -184,7 +184,7 @@ local function updateStage(stage)
 			end
 		end
 		length += 6000
-		stage:SetAttribute(Attributes.Stage.Status, "Playing")
+		stage:SetAttribute(Constants.Attributes.Stage.Status, "Playing")
 		for _, player in players do
 			eventsFolder.StageStartSong:FireClient(player, chosenSong, stage)
 		end
@@ -204,7 +204,7 @@ local function updateStage(stage)
 		_result_1 = _result_1.Name
 	end
 	print("[src/server/Stages.ts:197]", `Cleaning up '{_result_1}' stage`)
-	stage:SetAttribute(Attributes.Stage.Status, "Waiting")
+	stage:SetAttribute(Constants.Attributes.Stage.Status, "Waiting")
 	for _, player in players do
 		local character = player.Character
 		local _result_2 = character
@@ -217,8 +217,8 @@ local function updateStage(stage)
 			_result_3 = _result_3:FindFirstChild("RootAttachment")
 		end
 		local rootAttachment = _result_3
-		if character and rootPart and rootAttachment and character:GetAttribute(Attributes.Character.IsAttachedStage) == true then
-			local _condition = character:GetAttribute(Attributes.Character.StagePlayerNumber)
+		if character and rootPart and rootAttachment and character:GetAttribute(Constants.Attributes.Character.IsAttachedStage) == true then
+			local _condition = character:GetAttribute(Constants.Attributes.Character.StagePlayerNumber)
 			if _condition == nil then
 				_condition = 1
 			end
@@ -226,7 +226,7 @@ local function updateStage(stage)
 		end
 		local _result_4 = character
 		if _result_4 ~= nil then
-			_result_4 = _result_4:GetAttribute(Attributes.Character.StagePlayerNumber)
+			_result_4 = _result_4:GetAttribute(Constants.Attributes.Character.StagePlayerNumber)
 		end
 		local _condition = _result_4
 		if _condition == nil then
@@ -236,7 +236,7 @@ local function updateStage(stage)
 		local preview = stage:FindFirstChild(`Preview{playerNumber}`)
 		if preview ~= nil then
 			eventsFolder.EndStagePreview:FireAllClients(preview)
-			preview:SetAttribute(Attributes.StagePreview.IsOngoing, nil)
+			preview:SetAttribute(Constants.Attributes.StagePreview.IsOngoing, nil)
 		end
 		activePreviews[player] = nil
 		activeSongs[player] = nil
@@ -260,7 +260,7 @@ local function init()
 		local actualPreview = activePreviews[_player]
 		local _condition = not actualPreview
 		if not _condition then
-			local _value = actualPreview.preview:GetAttribute(Attributes.StagePreview.IsOngoing)
+			local _value = actualPreview.preview:GetAttribute(Constants.Attributes.StagePreview.IsOngoing)
 			_condition = not (_value ~= 0 and _value == _value and _value ~= "" and _value)
 		end
 		if _condition then

@@ -6,7 +6,7 @@ import {
 
 import { $print, $package } from 'rbxts-transform-debug';
 
-import { Attributes } from 'shared/Constants';
+import { Constants } from 'shared/Constants';
 import * as Types from 'shared/Types';
 import * as OsuBeatmapConverter from 'shared/OsuBeatmapConverter';
 import * as Gameplay from './MainGameplay';
@@ -27,7 +27,7 @@ const cachedCharts = new Map<ModuleScript, Types.Chart>();
 function promptTriggered(prompt: ProximityPrompt, stage: Types.StageModel, playerNumber: number) {
 	if (!player.Character) return;
 	
-	if (player.Character.GetAttribute(Attributes.Character.IsAttachedStage) !== undefined) {
+	if (player.Character.GetAttribute(Constants.Attributes.Character.IsAttachedStage) !== undefined) {
 		$print(`Leaving '${stage.Parent?.Name}' stage`);
 	} else {
 		$print(`Joining '${stage.Parent?.Name}' stage as Player${playerNumber}`);
@@ -76,7 +76,7 @@ stagesFolder.DescendantAdded.Connect((stage) => {
 });
 
 (eventsFolder.WaitForChild('UpdateStagePreview') as RemoteEvent).OnClientEvent.Connect((preview: Types.StagePreview, updateData: string, module: ModuleScript) => {
-	if (!preview.GetAttribute(Attributes.StagePreview.IsOngoing)) return;
+	if (!preview.GetAttribute(Constants.Attributes.StagePreview.IsOngoing)) return;
 	
 	if (!cachedCharts.has(module)) cachedCharts.set(module, Gameplay.loadSongModule(module));
 	
@@ -85,11 +85,11 @@ stagesFolder.DescendantAdded.Connect((stage) => {
 
 (eventsFolder.WaitForChild('EndStagePreview') as RemoteEvent).OnClientEvent.Connect((preview: Types.StagePreview) => {
 	preview.SurfaceGui.Lanes.ClearAllChildren();
-	preview.SetAttribute(Attributes.StagePreview.IsOngoing, undefined);
+	preview.SetAttribute(Constants.Attributes.StagePreview.IsOngoing, undefined);
 });
 
 (eventsFolder.WaitForChild('StartStagePreview') as RemoteEvent).OnClientEvent.Connect((preview: Types.StagePreview) => {
-	preview.SetAttribute(Attributes.StagePreview.IsOngoing, true);
+	preview.SetAttribute(Constants.Attributes.StagePreview.IsOngoing, true);
 });
 
 // task.wait(2);

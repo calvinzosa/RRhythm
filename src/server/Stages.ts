@@ -8,13 +8,13 @@ import {
 import { $print, $warn } from 'rbxts-transform-debug';
 
 import LZWCompression from 'shared/LZWCompression';
-import { Attributes } from 'shared/Constants';
+import { Constants } from 'shared/Constants';
 import * as Types from 'shared/Types';
 
 const Compression = new LZWCompression();
 
 const eventsFolder = ReplicatedStorage.WaitForChild('Events') as Types.EventsFolder;
-	
+
 const selectedPlayerSongs = new Map<Player, ModuleScript | '<None>' | '<Exit>'>();
 
 const activePreviews = new Map<Player, {
@@ -29,25 +29,25 @@ const activePreviews = new Map<Player, {
 const activeSongs = new Map<Player, Types.Chart>();
 
 export function attachPlayer(player: Player, character: Model, rootPart: Part, rootAttachment: Attachment, playerNumber: number, stage: Types.StageModel) {
-	if (stage.GetAttribute(Attributes.Stage.Status) !== 'Waiting') return;
+	if (stage.GetAttribute(Constants.Attributes.Stage.Status) !== 'Waiting') return;
 	
 	const stagePlayer = stage.FindFirstChild(`Player${playerNumber}`) as (Types.StagePlayer | undefined);
 	if (!stagePlayer) return;
 	
-	if (character.GetAttribute(Attributes.Character.IsAttachedStage) === undefined) {
+	if (character.GetAttribute(Constants.Attributes.Character.IsAttachedStage) === undefined) {
 		stagePlayer.Trigger.Enabled = false;
 		stagePlayer.RigidConstraint.Attachment1 = rootAttachment;
 		stagePlayer.Character.Value = character;
 		
-		player.Character?.SetAttribute(Attributes.Character.StagePlayerNumber, playerNumber);
-		character.SetAttribute(Attributes.Character.IsAttachedStage, true);
+		player.Character?.SetAttribute(Constants.Attributes.Character.StagePlayerNumber, playerNumber);
+		character.SetAttribute(Constants.Attributes.Character.IsAttachedStage, true);
 	} else {
 		stagePlayer.Trigger.Enabled = true;
 		stagePlayer.RigidConstraint.Attachment1 = undefined;
 		stagePlayer.Character.Value = undefined;
 		
-		player.Character?.SetAttribute(Attributes.Character.StagePlayerNumber, undefined);
-		character.SetAttribute(Attributes.Character.IsAttachedStage, undefined);
+		player.Character?.SetAttribute(Constants.Attributes.Character.StagePlayerNumber, undefined);
+		character.SetAttribute(Constants.Attributes.Character.IsAttachedStage, undefined);
 	}
 }
 
@@ -75,7 +75,7 @@ export function updateStage(stage: Types.StageModel) {
 	
 	if (players.size() === 0) return $print('no players');
 	
-	stage.SetAttribute(Attributes.Stage.Status, 'Choosing');
+	stage.SetAttribute(Constants.Attributes.Stage.Status, 'Choosing');
 	
 	for (const player of players) eventsFolder.StartSongSelection.FireClient(player);
 	
@@ -102,7 +102,7 @@ export function updateStage(stage: Types.StageModel) {
 		if (song === '<Exit>') {
 			$print('Exiting stage');
 			
-			stage.SetAttribute(Attributes.Stage.Status, 'Waiting');
+			stage.SetAttribute(Constants.Attributes.Stage.Status, 'Waiting');
 			
 			for (const otherPlayer of players) {
 				selectedPlayerSongs.delete(otherPlayer);
@@ -110,13 +110,13 @@ export function updateStage(stage: Types.StageModel) {
 				const character = otherPlayer.Character;
 				const rootPart = character?.FindFirstChild('HumanoidRootPart') as Part | undefined;
 				const rootAttachment = rootPart?.FindFirstChild('RootAttachment') as Attachment | undefined;
-				if (character && rootPart && rootAttachment && character.GetAttribute(Attributes.Character.IsAttachedStage) === true) {
+				if (character && rootPart && rootAttachment && character.GetAttribute(Constants.Attributes.Character.IsAttachedStage) === true) {
 					attachPlayer(
 						otherPlayer,
 						character,
 						rootPart,
 						rootAttachment,
-						character.GetAttribute(Attributes.Character.StagePlayerNumber) as (number | undefined) ?? 1,
+						character.GetAttribute(Constants.Attributes.Character.StagePlayerNumber) as (number | undefined) ?? 1,
 						stage
 					);
 					
@@ -151,11 +151,11 @@ export function updateStage(stage: Types.StageModel) {
 			const character = player.Character;
 			if (!character) continue;
 			
-			const playerNumber = character.GetAttribute(Attributes.Character.StagePlayerNumber) as number | undefined ?? 1;
+			const playerNumber = character.GetAttribute(Constants.Attributes.Character.StagePlayerNumber) as number | undefined ?? 1;
 			const preview = stage.FindFirstChild(`Preview${playerNumber}`) as Types.StagePreview | undefined;
 			if (preview !== undefined) {
 				eventsFolder.StartStagePreview.FireAllClients(preview);
-				preview.SetAttribute(Attributes.StagePreview.IsOngoing, true);
+				preview.SetAttribute(Constants.Attributes.StagePreview.IsOngoing, true);
 				
 				activeSongs.set(player, chart);
 				
@@ -180,7 +180,7 @@ export function updateStage(stage: Types.StageModel) {
 		
 		length += 6000;
 		
-		stage.SetAttribute(Attributes.Stage.Status, 'Playing');
+		stage.SetAttribute(Constants.Attributes.Stage.Status, 'Playing');
 		
 		for (const player of players) eventsFolder.StageStartSong.FireClient(player, chosenSong, stage);
 		
@@ -196,28 +196,28 @@ export function updateStage(stage: Types.StageModel) {
 	
 	$print(`Cleaning up '${stage.Parent?.Name}' stage`);
 	
-	stage.SetAttribute(Attributes.Stage.Status, 'Waiting');
+	stage.SetAttribute(Constants.Attributes.Stage.Status, 'Waiting');
 	
 	for (const player of players) {
 		const character = player.Character;
 		const rootPart = character?.FindFirstChild('HumanoidRootPart') as Part | undefined;
 		const rootAttachment = rootPart?.FindFirstChild('RootAttachment') as Attachment | undefined;
-		if (character && rootPart && rootAttachment && character.GetAttribute(Attributes.Character.IsAttachedStage) === true) {
+		if (character && rootPart && rootAttachment && character.GetAttribute(Constants.Attributes.Character.IsAttachedStage) === true) {
 			attachPlayer(
 				player,
 				character,
 				rootPart,
 				rootAttachment,
-				character.GetAttribute(Attributes.Character.StagePlayerNumber) as (number | undefined) ?? 1,
+				character.GetAttribute(Constants.Attributes.Character.StagePlayerNumber) as (number | undefined) ?? 1,
 				stage
 			);
 		}
 		
-		const playerNumber = character?.GetAttribute(Attributes.Character.StagePlayerNumber) as number | undefined ?? 1;
+		const playerNumber = character?.GetAttribute(Constants.Attributes.Character.StagePlayerNumber) as number | undefined ?? 1;
 		const preview = stage.FindFirstChild(`Preview${playerNumber}`) as Types.StagePreview | undefined;
 		if (preview !== undefined) {
 			eventsFolder.EndStagePreview.FireAllClients(preview);
-			preview.SetAttribute(Attributes.StagePreview.IsOngoing, undefined);
+			preview.SetAttribute(Constants.Attributes.StagePreview.IsOngoing, undefined);
 		}
 		
 		activePreviews.delete(player);
@@ -236,7 +236,7 @@ export function init() {
 		}
 		
 		const actualPreview = activePreviews.get(player);
-		if (!actualPreview || !actualPreview.preview.GetAttribute(Attributes.StagePreview.IsOngoing)) return;
+		if (!actualPreview || !actualPreview.preview.GetAttribute(Constants.Attributes.StagePreview.IsOngoing)) return;
 		
 		for (const otherPlayer of Players.GetPlayers()) {
 			if (otherPlayer.Character !== undefined && otherPlayer.DistanceFromCharacter(actualPreview.preview.Position) < 25) {

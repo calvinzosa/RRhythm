@@ -5,7 +5,7 @@ local HttpService = _services.HttpService
 local Workspace = _services.Workspace
 local StringUtils = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "string-utils")
 local Types = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Types")
-local Constants = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Constants")
+local Constants = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Constants").Constants
 local function mapNumbers(number)
 	local _condition = tonumber(number)
 	if _condition == nil then

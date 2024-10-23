@@ -1,7 +1,7 @@
 -- Compiled with roblox-ts v3.0.0
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
 local ContentProvider = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services").ContentProvider
-local Constants = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Constants")
+local Constants = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Constants").Constants
 local function preload()
 	local content = {}
 	for _, imageId in pairs(Constants.ImageIds.RankImages) do

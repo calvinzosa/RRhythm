@@ -3,7 +3,7 @@ import {
 } from '@rbxts/services';
 
 import { $print } from 'rbxts-transform-debug';
-import * as Constants from 'shared/Constants';
+import { Constants } from 'shared/Constants';
 
 export function preload() {
     const content: (Instance | string)[] = [];

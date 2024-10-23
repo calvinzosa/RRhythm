@@ -7,12 +7,12 @@ import { $print } from 'rbxts-transform-debug';
 
 import * as Types from 'shared/Types';
 import * as Stages from './Stages';
-import { Attributes } from 'shared/Constants';
+import { Constants } from 'shared/Constants';
 
 const eventsFolder = ReplicatedStorage.WaitForChild('Events') as Types.EventsFolder;
 const stagesFolder = Workspace.WaitForChild('Stages') as Folder;
 
-for (const stageType of stagesFolder.GetChildren()) for (const stage of stageType.GetChildren()) stage.SetAttribute(Attributes.Stage.Status, 'Waiting');
+for (const stageType of stagesFolder.GetChildren()) for (const stage of stageType.GetChildren()) stage.SetAttribute(Constants.Attributes.Stage.Status, 'Waiting');
 
 Stages.init();
 
@@ -25,7 +25,7 @@ eventsFolder.JoinStage.OnServerEvent.Connect((player, stage, playerNumber) => {
 	const rootAttachment = rootPart?.FindFirstChild('RootAttachment') as Attachment | undefined;
 	if (!character || !rootPart || !rootAttachment) return;
 	
-	if (stage.GetAttribute(Attributes.Stage.Status) !== 'Waiting') return;
+	if (stage.GetAttribute(Constants.Attributes.Stage.Status) !== 'Waiting') return;
 	
 	$print(`Attaching ${player.Name} to '${stage.Parent.Name}' stage as Player${playerNumber}`);
 	
