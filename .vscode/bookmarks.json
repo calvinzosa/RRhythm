@@ -1,0 +1,104 @@
+{
+	"files": [
+		{
+			"path": "src/shared/Types.ts",
+			"bookmarks": [
+				{
+					"line": 21,
+					"column": 17,
+					"label": "Standard Types"
+				},
+				{
+					"line": 25,
+					"column": 21,
+					"label": "Replicated Storage"
+				},
+				{
+					"line": 47,
+					"column": 9,
+					"label": "Models"
+				},
+				{
+					"line": 251,
+					"column": 18,
+					"label": "Gameplay"
+				}
+			]
+		},
+		{
+			"path": "src/client/MainGameplay.ts",
+			"bookmarks": [
+				{
+					"line": 69,
+					"column": 36,
+					"label": "() Calculate Accuracy"
+				},
+				{
+					"line": 75,
+					"column": 57,
+					"label": "() Calculate Difficulty"
+				},
+				{
+					"line": 117,
+					"column": 36,
+					"label": "() Calculate Note Pixels/s"
+				},
+				{
+					"line": 124,
+					"column": 82,
+					"label": "() Update HUD"
+				},
+				{
+					"line": 152,
+					"column": 30,
+					"label": "() Calculate Note Position"
+				},
+				{
+					"line": 184,
+					"column": 16,
+					"label": "() Hit Note"
+				},
+				{
+					"line": 249,
+					"column": 22,
+					"label": "() Lane Pressed"
+				},
+				{
+					"line": 279,
+					"column": 22,
+					"label": "() Lane Released"
+				},
+				{
+					"line": 353,
+					"column": 33,
+					"label": "() Start Gameplay"
+				},
+				{
+					"line": 557,
+					"column": 18,
+					"label": "() Gameplay Update"
+				},
+				{
+					"line": 952,
+					"column": 47,
+					"label": "() Show Grade"
+				},
+				{
+					"line": 1027,
+					"column": 38,
+					"label": "() Start Song Selection"
+				},
+				{
+					"line": 1138,
+					"column": 16,
+					"label": "() End Song Selection"
+				},
+				{
+					"line": 1163,
+					"column": 45,
+					"label": "() Update Stage Preview"
+				}
+			]
+		}
+	]
+}

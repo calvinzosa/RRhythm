@@ -1,0 +1,55 @@
+{
+	"name": "RRhythm",
+	"globIgnorePaths": [
+		"**/package.json",
+		"**/tsconfig.json"
+	],
+	"tree": {
+		"$className": "DataModel",
+		"ServerScriptService": {
+			"$className": "ServerScriptService",
+			"Server": {
+				"$path": "out/server"
+			}
+		},
+		"ReplicatedStorage": {
+			"$className": "ReplicatedStorage",
+			"rbxts_include": {
+				"$path": "include",
+				"node_modules": {
+					"$className": "Folder",
+					"@rbxts": {
+						"$path": "node_modules/@rbxts"
+					}
+				}
+			},
+			"Shared": {
+				"$path": "out/shared"
+			},
+			"Songs": {
+				"$path": "out/songs"
+			}
+		},
+		"StarterPlayer": {
+			"$className": "StarterPlayer",
+			"StarterPlayerScripts": {
+				"$className": "StarterPlayerScripts",
+				"Client": {
+					"$path": "out/client"
+				}
+			}
+		},
+		"Workspace": {
+			"$className": "Workspace",
+			"$properties": {
+				"FilteringEnabled": true
+			}
+		},
+		"SoundService": {
+			"$className": "SoundService",
+			"$properties": {
+				"RespectFilteringEnabled": true
+			}
+		}
+	}
+}
