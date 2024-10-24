@@ -45,7 +45,7 @@ let originalCameraCFrame: CFrame = CFrame.identity;
 let bindedKeys = [Enum.KeyCode.Q, Enum.KeyCode.W, Enum.KeyCode.LeftBracket, Enum.KeyCode.RightBracket];
 let laneWidth = 75;
 let lanePadding = 1;
-let noteSpeed = 0;
+let noteSpeed = 10;
 let selectedNoteSkin = 'CirclesV1';
 let maxVisibleNotes = 200;
 
@@ -110,15 +110,40 @@ export function calculateDifficulty(chart: Types.Chart) {
 	);
 	
 	let difficultyWord: string;
-	if (difficultyNumber > 20) difficultyWord = '???';
-	else if (difficultyNumber >= 15) difficultyWord = 'Expert+';
-	else if (difficultyNumber >= 12.5) difficultyWord = 'Expert';
-	else if (difficultyNumber >= 10) difficultyWord = 'Insane';
-	else if (difficultyNumber >= 5) difficultyWord = 'Hard';
-	else if (difficultyNumber >= 2.5) difficultyWord = 'Normal';
-	else difficultyWord = 'Easy';
 	
-	return $tuple(difficultyNumber, difficultyWord);
+	const clampedDifficulty = math.clamp(difficultyNumber, 0, 150);
+	
+	const hue = ((120 - 300 * math.sqrt(math.min(1, clampedDifficulty / 50))) / 360) % 1;
+	const saturation = 0.4;
+	const value = 0.9 - 0.9 * math.clamp((difficultyNumber - 50) / 100, 0, 1) ** 1.2;
+	
+	const difficultyColor = Color3.fromHSV(hue, saturation, value);
+	
+	if (difficultyNumber > 100) {
+		difficultyWord = 'Impossible';
+	} else if (difficultyNumber > 80) {
+		difficultyWord = 'Extreme+';
+	} else if (difficultyNumber > 60) {
+		difficultyWord = 'Extreme';
+	} else if (difficultyNumber > 40) {
+		difficultyWord = 'Crazy+';
+	} else if (difficultyNumber > 20) {
+		difficultyWord = 'Crazy';
+	} else if (difficultyNumber >= 15) {
+		difficultyWord = 'Expert+';
+	} else if (difficultyNumber >= 12.5) {
+		difficultyWord = 'Expert';
+	} else if (difficultyNumber >= 10) {
+		difficultyWord = 'Insane';
+	} else if (difficultyNumber >= 5) {
+		difficultyWord = 'Hard';
+	} else if (difficultyNumber >= 2.5) {
+		difficultyWord = 'Normal';
+	} else {
+		difficultyWord = 'Easy';
+	}
+	
+	return $tuple(difficultyNumber, difficultyWord, difficultyColor);
 }
 
 export function calculateActualNoteSpeed(noteSpeed: number, bpm: number, scrollSpeed: number): number {
@@ -257,7 +282,7 @@ export function laneOnPress(lane: Types.UILane, startTime: number, laneNumber: n
 	const currentTime = os.clock();
 	const elapsedTime = (currentTime - startTime) * 1000;
 	
-	lane.JudgementLine.Note.BackgroundTransparency = 0.8;
+	lane.JudgementLine.Note.BackgroundTransparency = lane.JudgementLine.GetAttribute('PressedTransparency') as number | undefined ?? 0.8;
 	
 	for (const [j, { note, noteData }] of ipairs(createdNotes)) {
 		const noteObject = createdNotes[j - 1];
@@ -286,7 +311,7 @@ export function laneOnPress(lane: Types.UILane, startTime: number, laneNumber: n
 export function laneOnRelease(lane: Types.UILane, laneNumber: number, startTime: number, createdNotes: Types.CreatedNote[]): void {
 	const elapsedTime = (os.clock() - startTime) * 1000;
 	
-	lane.JudgementLine.Note.BackgroundTransparency = 1;
+	lane.JudgementLine.Note.BackgroundTransparency = lane.JudgementLine.GetAttribute('NormalTransparency') as number | undefined ?? 1;
 	
 	const holdNote = heldLanes.get(laneNumber);
 	if (holdNote === undefined || holdNote.isReleased) return;
@@ -314,7 +339,7 @@ export function laneOnRelease(lane: Types.UILane, laneNumber: number, startTime:
 	holdNote.isReleased = true;
 }
 
-function parseSubKeyName(name: string, keyCount: number) {
+export function parseSubKeyName(name: string, keyCount: number) {
 	const operators = ['&', '>', ','];
 	
 	const tokens: string[] = [];
@@ -758,10 +783,16 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 						}
 					}
 					
-					const halfSize = laneWidth.idiv(2);
+					let topOffset = calculateYPosition(elapsedTime, noteObject.tailNote!.noteData, noteSpeed, bpm, scrollSpeed, laneHeight, hitPosition, heldTimings);
+					let bottomOffset = note.Position.Y.Offset;
 					
-					const topOffset = calculateYPosition(elapsedTime, noteObject.tailNote!.noteData, noteSpeed, bpm, scrollSpeed, laneHeight, hitPosition, heldTimings) - halfSize;
-					const bottomOffset = note.Position.Y.Offset - halfSize;
+					if (typeIs(noteObject.bodyNote.GetAttribute('OffsetTop'), 'number')) {
+						topOffset += math.round(laneWidth * (noteObject.bodyNote.GetAttribute('OffsetTop') as number));
+					}
+					
+					if (typeIs(noteObject.bodyNote.GetAttribute('OffsetBottom'), 'number')) {
+						bottomOffset += math.round(laneWidth * (noteObject.bodyNote.GetAttribute('OffsetBottom') as number));
+					}
 					
 					noteObject.bodyNote.Position = new UDim2(0, 0, 0, topOffset);
 					noteObject.bodyNote.Size = new UDim2(1, 0, 0, bottomOffset - topOffset);
@@ -1087,7 +1118,7 @@ export function startSongSelection() {
 		
 		const infoFrame = screenGui.SongSelector.Content.Info;
 		infoFrame.SongTitle.Text = '--';
-		infoFrame.Composer.Text = 'Select a difficulty';
+		infoFrame.Composer.Text = '<i>Select a song</i>';
 		infoFrame.Mappers.Text = '';
 		infoFrame.StarDifficulty.Text = '';
 		infoFrame.MaxHealth.Text = '';
@@ -1099,8 +1130,10 @@ export function startSongSelection() {
 		
 		doSelection<TextButton>(screenGui.SongSelector.Content.Categories, songsFolder, 'Folder', categoryButtonTemplate, false, (category) => {
 			doSelection<TextButton>(screenGui.SongSelector.Content.Songs, category, 'Folder', songButtonTemplate, false, (song) => {
-				infoFrame.SongTitle.Text = song.Name;
-				infoFrame.Composer.Text = 'Select a difficulty';
+				selectedDifficulty = undefined;
+				
+				infoFrame.SongTitle.Text = `<b>${song.Name}</b>`;
+				infoFrame.Composer.Text = '<i>Select a difficulty</i>';
 				infoFrame.Mappers.Text = '';
 				infoFrame.StarDifficulty.Text = '';
 				infoFrame.MaxHealth.Text = '';
@@ -1109,7 +1142,6 @@ export function startSongSelection() {
 				infoFrame.KeyCount.Text = '';
 				screenGui.SongSelector.Bottom.Select.AutoButtonColor = false;
 				screenGui.SongSelector.Bottom.Select.BackgroundColor3 = Color3.fromRGB(102, 179, 117);
-				selectedDifficulty = undefined;
 				
 				doSelection<ModuleScript>(screenGui.SongSelector.Content.Info.Difficulties, song, 'ModuleScript', difficultyButtonTemplate, false, (difficulty) => {
 					selectedDifficulty = difficulty;
@@ -1125,15 +1157,16 @@ export function startSongSelection() {
 					const minutes = length.idiv(60_000);
 					const seconds = (length / 1_000) % 60;
 					
-					const [difficultyNumber, difficultyWord] = calculateDifficulty(chart);
+					const [difficultyNumber, difficultyWord, difficultyColor] = calculateDifficulty(chart);
+					const hexColor = difficultyColor.ToHex();
 					
-					infoFrame.Composer.Text = `Composer: ${chart.metadata.artist}`;
-					infoFrame.Mappers.Text = `Mappers: ${chart.metadata.mappers.join(', ')}`;
-					infoFrame.StarDifficulty.Text = `DIF: ${difficultyWord} (@${string.format('%.1f', difficultyNumber)})`;
-					infoFrame.MaxHealth.Text = `HP: ${chart.difficulty.maxHealth}`;
-					infoFrame.OverallDifficulty.Text = `OD: ${chart.difficulty.overallDifficulty}`;
-					infoFrame.Duration.Text = `DUR: ${string.format('%d:%02d', minutes, seconds)}`;
-					infoFrame.KeyCount.Text = `KEYS: ${chart.metadata.totalLanes}K`;
+					infoFrame.Composer.Text = `Composer: <b>${chart.metadata.artist}</b>`;
+					infoFrame.Mappers.Text = `Mappers: <b>${chart.metadata.mappers.join(', ')}</b>`;
+					infoFrame.StarDifficulty.Text = `DIF: <b><font color="#${hexColor}">${difficultyWord}</font> (@${string.format('%.1f', difficultyNumber)})</b>`;
+					infoFrame.MaxHealth.Text = `HP: <b>${chart.difficulty.maxHealth}</b>`;
+					infoFrame.OverallDifficulty.Text = `OD: <b>${chart.difficulty.overallDifficulty}</b>`;
+					infoFrame.Duration.Text = `DUR: <b>${string.format('%d:%02d', minutes, seconds)}</b>`;
+					infoFrame.KeyCount.Text = `KEYS: <b>${chart.metadata.totalLanes}K</b>`;
 					
 					screenGui.SongSelector.Bottom.Select.AutoButtonColor = true;
 					screenGui.SongSelector.Bottom.Select.BackgroundColor3 = Color3.fromRGB(155, 255, 175);
@@ -1282,17 +1315,28 @@ export function updatePreview(preview: Types.StagePreview, songFolder: Folder, u
 			
 			const holdYScale = laneHolds.get(lane);
 			if (holdYScale) {
+				let topOffset = 0;
+				let bottomOffset = 0;
+				
+				if (typeIs(template.BodyNote.GetAttribute('OffsetTop'), 'number')) {
+					topOffset += laneWidth * (template.BodyNote.GetAttribute('OffsetTop') as number);
+				}
+				
+				if (typeIs(template.BodyNote.GetAttribute('OffsetBottom'), 'number')) {
+					bottomOffset += laneWidth * (template.BodyNote.GetAttribute('OffsetBottom') as number);
+				}
+				
 				let bodyNote = laneContainer.Notes.FindFirstChild(tostring(id + 0.5)) as Types.UIBodyNote | undefined;
 				if (!bodyNote) {
 					bodyNote = template.BodyNote.Clone();
 					bodyNote.Name = tostring(id + 0.5);
-					bodyNote.Position = new UDim2(0, 0, yScale, laneWidth.idiv(-2));
-					bodyNote.Size = new UDim2(1, 0, holdYScale - yScale, 0);
+					bodyNote.Position = new UDim2(0, 0, yScale, topOffset);
+					bodyNote.Size = new UDim2(1, 0, holdYScale - yScale, bottomOffset);
 					bodyNote.AnchorPoint = new Vector2(0, 0);
 					bodyNote.Parent = laneContainer.Notes;
 				} else TweenService.Create(bodyNote, info, {
-					Position: new UDim2(0, 0, yScale, laneWidth.idiv(-2)),
-					Size: new UDim2(1, 0, holdYScale - yScale, 0),
+					Position: new UDim2(0, 0, yScale, topOffset),
+					Size: new UDim2(1, 0, holdYScale - yScale, bottomOffset),
 				}).Play();
 				
 				laneHolds.delete(lane);

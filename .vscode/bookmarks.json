@@ -19,7 +19,7 @@
 					"label": "Models"
 				},
 				{
-					"line": 376,
+					"line": 392,
 					"column": 18,
 					"label": "Gameplay"
 				}
@@ -39,67 +39,67 @@
 					"label": "() Calculate Difficulty"
 				},
 				{
-					"line": 123,
+					"line": 148,
 					"column": 36,
 					"label": "() Calculate Note Pixels/s"
 				},
 				{
-					"line": 130,
+					"line": 155,
 					"column": 82,
 					"label": "() Update HUD"
 				},
 				{
-					"line": 158,
+					"line": 183,
 					"column": 30,
 					"label": "() Calculate Note Position"
 				},
 				{
-					"line": 190,
+					"line": 215,
 					"column": 16,
 					"label": "() Hit Note"
 				},
 				{
-					"line": 255,
+					"line": 280,
 					"column": 22,
 					"label": "() Lane Pressed"
 				},
 				{
-					"line": 285,
+					"line": 310,
 					"column": 22,
 					"label": "() Lane Released"
 				},
 				{
-					"line": 359,
+					"line": 384,
 					"column": 33,
 					"label": "() Start Gameplay"
 				},
 				{
-					"line": 564,
+					"line": 589,
 					"column": 18,
 					"label": "() Gameplay Update"
 				},
 				{
-					"line": 879,
+					"line": 910,
 					"column": 0,
 					"label": "() Finish Gameplay"
 				},
 				{
-					"line": 959,
+					"line": 990,
 					"column": 6,
 					"label": "() Show Grade"
 				},
 				{
-					"line": 1029,
+					"line": 1060,
 					"column": 38,
 					"label": "() Start Song Selection"
 				},
 				{
-					"line": 1145,
+					"line": 1178,
 					"column": 16,
 					"label": "() End Song Selection"
 				},
 				{
-					"line": 1170,
+					"line": 1203,
 					"column": 45,
 					"label": "() Update Stage Preview"
 				}

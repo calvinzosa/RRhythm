@@ -209,6 +209,10 @@ export type UIEditorTextInput = Frame & {
 	UIPadding: UIPadding;
 };
 
+export type UIEditorDropdownItem = TextButton & {
+	UIPadding: UIPadding;
+};
+
 export type UIEditorDropdown = Frame & {
 	UIListLayout: UIListLayout;
 	Property: TextLabel & {
@@ -220,7 +224,7 @@ export type UIEditorDropdown = Frame & {
 		UIPadding: UIPadding;
 		UIStroke: UIStroke;
 		UIFlexItem: UIFlexItem;
-		Items: Frame & {
+		Items: ScrollingFrame & {
 			UIListLayout: UIListLayout;
 			UIStroke: UIStroke;
 		};
@@ -256,6 +260,9 @@ export type UIEditorList = Frame & {
 
 export type UIEditor = Frame & {
 	Lanes: Frame;
+	Info: Frame & {
+		Milliseconds: TextLabel;
+	};
 	Content: Frame & {
 		Tabs: Frame & {
 			Content: Frame & {
@@ -303,15 +310,24 @@ export type UIEditor = Frame & {
 			Tags: UIEditorList;
 		};
 		Timings: ScrollingFrame & {
+			UIListLayout: UIListLayout;
+			UIPadding: UIPadding;
 			TextLabel: TextLabel;
 		};
 		Events: ScrollingFrame & {
-			TextLabel: TextLabel;
-		};
-		Export: ScrollingFrame & {
+			UIListLayout: UIListLayout;
+			UIPadding: UIPadding;
 			TextLabel: TextLabel;
 		};
 		Load: ScrollingFrame & {
+			UIListLayout: UIListLayout;
+			UIPadding: UIPadding;
+			Target: UIEditorDropdown;
+			Load: TextButton;
+		};
+		Export: ScrollingFrame & {
+			UIListLayout: UIListLayout;
+			UIPadding: UIPadding;
 			TextLabel: TextLabel;
 		};
 	};
@@ -416,7 +432,7 @@ export type CreatedNote =
 export type BaseTimingObject = {
 	type: number;
 	millisecond: number;
-	volume: number;
+	volume?: number;
 };
 
 export type NormalTimingObject = BaseTimingObject & {

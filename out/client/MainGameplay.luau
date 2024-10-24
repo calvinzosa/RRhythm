@@ -37,7 +37,7 @@ local originalCameraCFrame = CFrame.identity
 local bindedKeys = { Enum.KeyCode.Q, Enum.KeyCode.W, Enum.KeyCode.LeftBracket, Enum.KeyCode.RightBracket }
 local laneWidth = 75
 local lanePadding = 1
-local noteSpeed = 0
+local noteSpeed = 10
 local selectedNoteSkin = "CirclesV1"
 local maxVisibleNotes = 200
 local accuracyFormat = '<stroke thickness="2" color="#000" joins="miter"><b>%s</b></stroke>'
@@ -97,8 +97,21 @@ local function calculateDifficulty(chart)
 	end
 	local difficultyNumber = 3 * (((10 / chart.difficulty.maxHealth) ^ (1 / 2) * chart.difficulty.overallDifficulty ^ (2 / 3) * (1 + highestCombo / 10) ^ (1 / 3)) ^ (1 + averageNoteDensity / (10 * highestNoteDensity)))
 	local difficultyWord
-	if difficultyNumber > 20 then
-		difficultyWord = "???"
+	local clampedDifficulty = math.clamp(difficultyNumber, 0, 150)
+	local hue = ((120 - 300 * math.sqrt(math.min(1, clampedDifficulty / 50))) / 360) % 1
+	local saturation = 0.4
+	local value = 0.9 - 0.9 * math.clamp((difficultyNumber - 50) / 100, 0, 1) ^ 1.2
+	local difficultyColor = Color3.fromHSV(hue, saturation, value)
+	if difficultyNumber > 100 then
+		difficultyWord = "Impossible"
+	elseif difficultyNumber > 80 then
+		difficultyWord = "Extreme+"
+	elseif difficultyNumber > 60 then
+		difficultyWord = "Extreme"
+	elseif difficultyNumber > 40 then
+		difficultyWord = "Crazy+"
+	elseif difficultyNumber > 20 then
+		difficultyWord = "Crazy"
 	elseif difficultyNumber >= 15 then
 		difficultyWord = "Expert+"
 	elseif difficultyNumber >= 12.5 then
@@ -112,7 +125,7 @@ local function calculateDifficulty(chart)
 	else
 		difficultyWord = "Easy"
 	end
-	return difficultyNumber, difficultyWord
+	return difficultyNumber, difficultyWord, difficultyColor
 end
 local function calculateActualNoteSpeed(noteSpeed, bpm, scrollSpeed)
 	local bps = bpm / 60
@@ -272,7 +285,11 @@ end
 local function laneOnPress(lane, startTime, laneNumber, createdNotes)
 	local currentTime = os.clock()
 	local elapsedTime = (currentTime - startTime) * 1000
-	lane.JudgementLine.Note.BackgroundTransparency = 0.8
+	local _condition = lane.JudgementLine:GetAttribute("PressedTransparency")
+	if _condition == nil then
+		_condition = 0.8
+	end
+	lane.JudgementLine.Note.BackgroundTransparency = _condition
 	for j, _binding in ipairs(createdNotes) do
 		local note = _binding.note
 		local noteData = _binding.noteData
@@ -300,7 +317,11 @@ local function laneOnPress(lane, startTime, laneNumber, createdNotes)
 end
 local function laneOnRelease(lane, laneNumber, startTime, createdNotes)
 	local elapsedTime = (os.clock() - startTime) * 1000
-	lane.JudgementLine.Note.BackgroundTransparency = 1
+	local _condition = lane.JudgementLine:GetAttribute("NormalTransparency")
+	if _condition == nil then
+		_condition = 1
+	end
+	lane.JudgementLine.Note.BackgroundTransparency = _condition
 	local _laneNumber = laneNumber
 	local holdNote = heldLanes[_laneNumber]
 	if holdNote == nil or holdNote.isReleased then
@@ -391,7 +412,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			finish()
 		end
 		isPlaying = true
-		print("[src/client/MainGameplay.ts:367]", "Initializing gameplay...")
+		print("[src/client/MainGameplay.ts:392]", "Initializing gameplay...")
 		local selectedSkinFolder = skinsFolder:WaitForChild(selectedNoteSkin, 5)
 		if not selectedSkinFolder then
 			selectedSkinFolder = skinsFolder:WaitForChild("Circles V1")
@@ -413,7 +434,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 					}
 				end
 			end, function(err)
-				warn("[src/client/MainGameplay.ts:390]", `Error while parsing sub key folder '{subKeyFolder}' - {err}`)
+				warn("[src/client/MainGameplay.ts:415]", `Error while parsing sub key folder '{subKeyFolder}' - {err}`)
 			end)
 		end
 		for i = 1, chart.metadata.totalLanes do
@@ -444,7 +465,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			Size = UDim2.new(1, 0, 1, 0),
 		}):Play()
 		task.wait(1)
-		print("[src/client/MainGameplay.ts:425]", "Finished transition")
+		print("[src/client/MainGameplay.ts:450]", "Finished transition")
 		averageError[1] = 0
 		averageError[2] = 0
 		table.clear(allHitErrors[1])
@@ -499,7 +520,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			table.insert(laneHotkeys, hotkey)
 		end
 		screenGui.Lanes.Visible = true
-		print("[src/client/MainGameplay.ts:486]", `Created {totalLanes} lanes and binded {#laneHotkeys} keys`)
+		print("[src/client/MainGameplay.ts:511]", `Created {totalLanes} lanes and binded {#laneHotkeys} keys`)
 		startTime = os.clock() + 4
 		local countdown = 3
 		local heldNotes = {}
@@ -519,7 +540,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 		end)
 		for i, note in ipairs(chart.notes) do
 			if note.lane < 0 or note.lane >= totalLanes then
-				warn("[src/client/MainGameplay.ts:508]", `> Note #{i} is not in a valid lane ({note.lane}), the mininum is 0 and the maximum is {totalLanes - 1}`)
+				warn("[src/client/MainGameplay.ts:533]", `> Note #{i} is not in a valid lane ({note.lane}), the mininum is 0 and the maximum is {totalLanes - 1}`)
 				continue
 			end
 			if note.type == 0 then
@@ -555,7 +576,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			_condition_1 = 1
 		end
 		scrollSpeed = _condition_1
-		print("[src/client/MainGameplay.ts:535]", `Loaded {#heldNotes} notes, {#heldTimings} timings, and {#heldEvents} events in {string.format("%.4f", (os.clock() - loadStartTime) / 1000)}ms`)
+		print("[src/client/MainGameplay.ts:560]", `Loaded {#heldNotes} notes, {#heldTimings} timings, and {#heldEvents} events in {string.format("%.4f", (os.clock() - loadStartTime) / 1000)}ms`)
 		TS.try(function()
 			RunService:UnbindFromRenderStep("GameplayUpdate")
 		end, function(err) end)
@@ -570,7 +591,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 		camera.CameraType = Enum.CameraType.Scriptable
 		camera.CFrame = stage.Camera.CFrame
 		task.wait(1)
-		print("[src/client/MainGameplay.ts:557]", "Finished second transition")
+		print("[src/client/MainGameplay.ts:582]", "Finished second transition")
 		local lastPreviewUpdateTime = os.clock()
 		TS.try(function()
 			eventsFolder.UpdateStagePreview:FireServer(Compression:compress(`0,nan,0,0,{bpm},{scrollSpeed}|`))
@@ -760,9 +781,16 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 							updateHUD(true, true)
 						end
 					end
-					local halfSize = laneWidth // 2
-					local topOffset = calculateYPosition(elapsedTime, noteObject.tailNote.noteData, noteSpeed, bpm, scrollSpeed, laneHeight, hitPosition, heldTimings) - halfSize
-					local bottomOffset = note.Position.Y.Offset - halfSize
+					local topOffset = calculateYPosition(elapsedTime, noteObject.tailNote.noteData, noteSpeed, bpm, scrollSpeed, laneHeight, hitPosition, heldTimings)
+					local bottomOffset = note.Position.Y.Offset
+					local _arg0 = noteObject.bodyNote:GetAttribute("OffsetTop")
+					if type(_arg0) == "number" then
+						topOffset += math.round(laneWidth * (noteObject.bodyNote:GetAttribute("OffsetTop")))
+					end
+					local _arg0_1 = noteObject.bodyNote:GetAttribute("OffsetBottom")
+					if type(_arg0_1) == "number" then
+						bottomOffset += math.round(laneWidth * (noteObject.bodyNote:GetAttribute("OffsetBottom")))
+					end
 					noteObject.bodyNote.Position = UDim2.new(0, 0, 0, topOffset)
 					noteObject.bodyNote.Size = UDim2.new(1, 0, 0, bottomOffset - topOffset)
 				else
@@ -911,12 +939,12 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			camera.CameraType = Enum.CameraType.Scriptable
 			camera.CFrame = stage.Camera.CFrame
 		end)
-		print("[src/client/MainGameplay.ts:876]", "Binded main gameplay loop")
+		print("[src/client/MainGameplay.ts:907]", "Binded main gameplay loop")
 	end)
 end
 function finish()
 	return TS.Promise.new(function(resolve)
-		print("[src/client/MainGameplay.ts:882]", "Finishing gameplay...")
+		print("[src/client/MainGameplay.ts:913]", "Finishing gameplay...")
 		TS.try(function()
 			RunService:UnbindFromRenderStep("GameplayUpdate")
 		end, function(err) end)
@@ -945,7 +973,7 @@ function finish()
 		end
 		Utils.destroyAfter(laneFrames, info.Time)
 		table.clear(laneFrames)
-		print("[src/client/MainGameplay.ts:924]", "Cleared lanes")
+		print("[src/client/MainGameplay.ts:955]", "Cleared lanes")
 		isPlaying = false
 		TweenService:Create(screenGui.ComboCounter, info, {
 			GroupTransparency = 1,
@@ -967,7 +995,7 @@ function finish()
 		local _uDim2_1 = UDim2.new(-2, 0, 0, 0)
 		_object_1[_left_1] = _position_1 + _uDim2_1
 		TweenService:Create(_exp_1, info, _object_1):Play()
-		print("[src/client/MainGameplay.ts:944]", "Cleared UI")
+		print("[src/client/MainGameplay.ts:975]", "Cleared UI")
 		task.wait(info.Time)
 		if not isPlaying then
 			screenGui.Lanes.Visible = false
@@ -1110,7 +1138,7 @@ local function startSongSelection()
 		end
 		local infoFrame = screenGui.SongSelector.Content.Info
 		infoFrame.SongTitle.Text = "--"
-		infoFrame.Composer.Text = "Select a difficulty"
+		infoFrame.Composer.Text = "<i>Select a song</i>"
 		infoFrame.Mappers.Text = ""
 		infoFrame.StarDifficulty.Text = ""
 		infoFrame.MaxHealth.Text = ""
@@ -1121,8 +1149,9 @@ local function startSongSelection()
 		screenGui.SongSelector.Bottom.Select.BackgroundColor3 = Color3.fromRGB(102, 179, 117)
 		doSelection(screenGui.SongSelector.Content.Categories, songsFolder, "Folder", categoryButtonTemplate, false, function(category)
 			doSelection(screenGui.SongSelector.Content.Songs, category, "Folder", songButtonTemplate, false, function(song)
-				infoFrame.SongTitle.Text = song.Name
-				infoFrame.Composer.Text = "Select a difficulty"
+				selectedDifficulty = nil
+				infoFrame.SongTitle.Text = `<b>{song.Name}</b>`
+				infoFrame.Composer.Text = "<i>Select a difficulty</i>"
 				infoFrame.Mappers.Text = ""
 				infoFrame.StarDifficulty.Text = ""
 				infoFrame.MaxHealth.Text = ""
@@ -1131,7 +1160,6 @@ local function startSongSelection()
 				infoFrame.KeyCount.Text = ""
 				screenGui.SongSelector.Bottom.Select.AutoButtonColor = false
 				screenGui.SongSelector.Bottom.Select.BackgroundColor3 = Color3.fromRGB(102, 179, 117)
-				selectedDifficulty = nil
 				doSelection(screenGui.SongSelector.Content.Info.Difficulties, song, "ModuleScript", difficultyButtonTemplate, false, function(difficulty)
 					selectedDifficulty = difficulty
 					local chart = loadSongModule(difficulty)
@@ -1143,14 +1171,15 @@ local function startSongSelection()
 					end
 					local minutes = length // 60000
 					local seconds = (length / 1000) % 60
-					local difficultyNumber, difficultyWord = calculateDifficulty(chart)
-					infoFrame.Composer.Text = `Composer: {chart.metadata.artist}`
-					infoFrame.Mappers.Text = `Mappers: {table.concat(chart.metadata.mappers, ", ")}`
-					infoFrame.StarDifficulty.Text = `DIF: {difficultyWord} (@{string.format("%.1f", difficultyNumber)})`
-					infoFrame.MaxHealth.Text = `HP: {chart.difficulty.maxHealth}`
-					infoFrame.OverallDifficulty.Text = `OD: {chart.difficulty.overallDifficulty}`
-					infoFrame.Duration.Text = `DUR: {string.format("%d:%02d", minutes, seconds)}`
-					infoFrame.KeyCount.Text = `KEYS: {chart.metadata.totalLanes}K`
+					local difficultyNumber, difficultyWord, difficultyColor = calculateDifficulty(chart)
+					local hexColor = difficultyColor:ToHex()
+					infoFrame.Composer.Text = `Composer: <b>{chart.metadata.artist}</b>`
+					infoFrame.Mappers.Text = `Mappers: <b>{table.concat(chart.metadata.mappers, ", ")}</b>`
+					infoFrame.StarDifficulty.Text = `DIF: <b><font color="#{hexColor}">{difficultyWord}</font> (@{string.format("%.1f", difficultyNumber)})</b>`
+					infoFrame.MaxHealth.Text = `HP: <b>{chart.difficulty.maxHealth}</b>`
+					infoFrame.OverallDifficulty.Text = `OD: <b>{chart.difficulty.overallDifficulty}</b>`
+					infoFrame.Duration.Text = `DUR: <b>{string.format("%d:%02d", minutes, seconds)}</b>`
+					infoFrame.KeyCount.Text = `KEYS: <b>{chart.metadata.totalLanes}K</b>`
 					screenGui.SongSelector.Bottom.Select.AutoButtonColor = true
 					screenGui.SongSelector.Bottom.Select.BackgroundColor3 = Color3.fromRGB(155, 255, 175)
 				end)
@@ -1329,18 +1358,28 @@ local function updatePreview(preview, songFolder, updateData, chart)
 			local _lane = lane
 			local holdYScale = laneHolds[_lane]
 			if holdYScale ~= 0 and holdYScale == holdYScale and holdYScale then
+				local topOffset = 0
+				local bottomOffset = 0
+				local _arg0 = template.BodyNote:GetAttribute("OffsetTop")
+				if type(_arg0) == "number" then
+					topOffset += laneWidth * (template.BodyNote:GetAttribute("OffsetTop"))
+				end
+				local _arg0_1 = template.BodyNote:GetAttribute("OffsetBottom")
+				if type(_arg0_1) == "number" then
+					bottomOffset += laneWidth * (template.BodyNote:GetAttribute("OffsetBottom"))
+				end
 				local bodyNote = laneContainer.Notes:FindFirstChild(tostring(id + 0.5))
 				if not bodyNote then
 					bodyNote = template.BodyNote:Clone()
 					bodyNote.Name = tostring(id + 0.5)
-					bodyNote.Position = UDim2.new(0, 0, yScale, laneWidth // (-2))
-					bodyNote.Size = UDim2.new(1, 0, holdYScale - yScale, 0)
+					bodyNote.Position = UDim2.new(0, 0, yScale, topOffset)
+					bodyNote.Size = UDim2.new(1, 0, holdYScale - yScale, bottomOffset)
 					bodyNote.AnchorPoint = Vector2.new(0, 0)
 					bodyNote.Parent = laneContainer.Notes
 				else
 					TweenService:Create(bodyNote, info, {
-						Position = UDim2.new(0, 0, yScale, laneWidth // (-2)),
-						Size = UDim2.new(1, 0, holdYScale - yScale, 0),
+						Position = UDim2.new(0, 0, yScale, topOffset),
+						Size = UDim2.new(1, 0, holdYScale - yScale, bottomOffset),
 					}):Play()
 				end
 				local _lane_1 = lane
@@ -1390,6 +1429,7 @@ return {
 	hitNote = hitNote,
 	laneOnPress = laneOnPress,
 	laneOnRelease = laneOnRelease,
+	parseSubKeyName = parseSubKeyName,
 	start = start,
 	finish = finish,
 	showGrade = showGrade,
