@@ -3,20 +3,28 @@ local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_incl
 local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
 local Players = _services.Players
 local ReplicatedStorage = _services.ReplicatedStorage
+local RunService = _services.RunService
 local Workspace = _services.Workspace
 local Constants = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Constants").Constants
 local Types = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "Types")
 local OsuBeatmapConverter = TS.import(script, game:GetService("ReplicatedStorage"), "Shared", "OsuBeatmapConverter")
-local Gameplay = TS.import(script, script, "MainGameplay")
+local MainGameplay = TS.import(script, script, "MainGameplay")
+local Editor = TS.import(script, script, "Editor")
 local UserInput = TS.import(script, script, "UserInput")
 local Preloader = TS.import(script, script, "Preloader")
 local player = Players.LocalPlayer
 local eventsFolder = ReplicatedStorage:WaitForChild("Events")
 local stagesFolder = Workspace:WaitForChild("Stages")
-print("[src/client/index.client.ts:20]", `Hello {player.Name}!`)
+print("[src/client/index.client.ts:22]", `Hello {player.Name}!`)
 UserInput.init()
 Preloader.preload()
 local cachedCharts = {}
+if RunService:IsStudio() then
+	local editorToggleKeybind = UserInput.Hotkey.new("DevToggleEditor", Enum.KeyCode.O)
+	editorToggleKeybind:onPress(function()
+		return Editor.init()
+	end)
+end
 local function promptTriggered(prompt, stage, playerNumber)
 	if not player.Character then
 		return nil
@@ -26,13 +34,13 @@ local function promptTriggered(prompt, stage, playerNumber)
 		if _result ~= nil then
 			_result = _result.Name
 		end
-		print("[src/client/index.client.ts:31]", `Leaving '{_result}' stage`)
+		print("[src/client/index.client.ts:39]", `Leaving '{_result}' stage`)
 	else
 		local _result = stage.Parent
 		if _result ~= nil then
 			_result = _result.Name
 		end
-		print("[src/client/index.client.ts:33]", `Joining '{_result}' stage as Player{playerNumber}`)
+		print("[src/client/index.client.ts:41]", `Joining '{_result}' stage as Player{playerNumber}`)
 	end
 	eventsFolder.JoinStage:FireServer(stage, playerNumber)
 end
@@ -64,7 +72,7 @@ stagesFolder.DescendantAdded:Connect(function(stage)
 end);
 (eventsFolder:WaitForChild("StartSongSelection")).OnClientEvent:Connect(TS.async(function()
 	while true do
-		local selectedSong = TS.await(Gameplay.startSongSelection())
+		local selectedSong = TS.await(MainGameplay.startSongSelection())
 		local didSelect = eventsFolder.ChooseSong:InvokeServer(selectedSong)
 		if didSelect == "selected" or selectedSong == "<Exit>" then
 			break
@@ -74,12 +82,12 @@ end);
 	end
 end));
 (eventsFolder:WaitForChild("EndSongSelection")).OnClientEvent:Connect(function()
-	Gameplay.endSongSelection()
+	MainGameplay.endSongSelection()
 end);
 (eventsFolder:WaitForChild("StageStartSong")).OnClientEvent:Connect(TS.async(function(data, stage)
-	local chart = Gameplay.loadSongModule(data)
-	local stats = TS.await(Gameplay.start(chart, data.Parent, stage, true, false))
-	Gameplay.showGrade(chart, unpack(stats))
+	local chart = MainGameplay.loadSongModule(data)
+	local stats = TS.await(MainGameplay.start(chart, data.Parent, stage, true, false))
+	MainGameplay.showGrade(chart, unpack(stats))
 end));
 (eventsFolder:WaitForChild("UpdateStagePreview")).OnClientEvent:Connect(function(preview, updateData, module)
 	local _value = preview:GetAttribute(Constants.Attributes.StagePreview.IsOngoing)
@@ -89,14 +97,14 @@ end));
 	local _module = module
 	if not (cachedCharts[_module] ~= nil) then
 		local _module_1 = module
-		local _arg1 = Gameplay.loadSongModule(module)
+		local _arg1 = MainGameplay.loadSongModule(module)
 		cachedCharts[_module_1] = _arg1
 	end
 	local _exp = preview
 	local _exp_1 = module.Parent
 	local _exp_2 = updateData
 	local _module_1 = module
-	Gameplay.updatePreview(_exp, _exp_1, _exp_2, cachedCharts[_module_1])
+	MainGameplay.updatePreview(_exp, _exp_1, _exp_2, cachedCharts[_module_1])
 end);
 (eventsFolder:WaitForChild("EndStagePreview")).OnClientEvent:Connect(function(preview)
 	preview.SurfaceGui.Lanes:ClearAllChildren()

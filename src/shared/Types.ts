@@ -195,6 +195,132 @@ export type UIDebugHUD = Frame & {
 	UIListLayout: UIListLayout;
 };
 
+export type UIEditorTextInput = Frame & {
+	UIListLayout: UIListLayout;
+	Property: TextLabel & {
+		UIFlexItem: UIFlexItem;
+		UIPadding: UIPadding;
+	};
+	Value: TextBox & {
+		UIFlexItem: UIFlexItem;
+		UIPadding: UIPadding;
+		UIStroke: UIStroke;
+	};
+	UIPadding: UIPadding;
+};
+
+export type UIEditorDropdown = Frame & {
+	UIListLayout: UIListLayout;
+	Property: TextLabel & {
+		UIFlexItem: UIFlexItem;
+		UIPadding: UIPadding;
+	};
+	UIPadding: UIPadding;
+	Dropdown: TextButton & {
+		UIPadding: UIPadding;
+		UIStroke: UIStroke;
+		UIFlexItem: UIFlexItem;
+		Items: Frame & {
+			UIListLayout: UIListLayout;
+			UIStroke: UIStroke;
+		};
+		Arrow: ImageLabel & {
+			UIAspectRatioConstraint: UIAspectRatioConstraint;
+		};
+	};
+};
+
+export type UIEditorList = Frame & {
+	UIListLayout: UIListLayout;
+	Property: TextLabel & {
+		UIFlexItem: UIFlexItem;
+		UIPadding: UIPadding;
+	};
+	UIPadding: UIPadding;
+	List: Frame & {
+		UIFlexItem: UIFlexItem;
+		UIListLayout: UIListLayout;
+		Value: TextBox & {
+			UIPadding: UIPadding;
+			UIStroke: UIStroke;
+			Add: TextButton & {
+				UIAspectRatioConstraint: UIAspectRatioConstraint;
+			};
+		};
+		Template: TextButton & {
+			UIStroke: UIStroke;
+			UIPadding: UIPadding;
+		};
+	};
+};
+
+export type UIEditor = Frame & {
+	Lanes: Frame;
+	Content: Frame & {
+		Tabs: Frame & {
+			Content: Frame & {
+				Metadata: TextButton & {
+					UIFlexItem: UIFlexItem;
+					UIPadding: UIPadding;
+					Underline: Frame;
+				};
+				UIListLayout: UIListLayout;
+				Timings: TextButton & {
+					UIFlexItem: UIFlexItem;
+					UIPadding: UIPadding;
+					Underline: Frame;
+				};
+				Events: TextButton & {
+					UIFlexItem: UIFlexItem;
+					UIPadding: UIPadding;
+					Underline: Frame;
+				};
+				Load: TextButton & {
+					UIFlexItem: UIFlexItem;
+					UIPadding: UIPadding;
+					Underline: Frame;
+				};
+				Export: TextButton & {
+					UIFlexItem: UIFlexItem;
+					UIPadding: UIPadding;
+					Underline: Frame;
+				};
+			};
+		};
+		Metadata: ScrollingFrame & {
+			UIListLayout: UIListLayout;
+			UIPadding: UIPadding;
+			Title: UIEditorTextInput
+			AudioName: UIEditorTextInput;
+			Set: UIEditorDropdown;
+			Description: UIEditorTextInput;
+			Difficulty: UIEditorTextInput;
+			OverallDifficulty: UIEditorTextInput;
+			LaneCount: UIEditorTextInput;
+			Source: UIEditorTextInput;
+			Artist: UIEditorTextInput;
+			Mappers: UIEditorList;
+			Tags: UIEditorList;
+		};
+		Timings: ScrollingFrame & {
+			TextLabel: TextLabel;
+		};
+		Events: ScrollingFrame & {
+			TextLabel: TextLabel;
+		};
+		Export: ScrollingFrame & {
+			TextLabel: TextLabel;
+		};
+		Load: ScrollingFrame & {
+			TextLabel: TextLabel;
+		};
+	};
+	RefreshPreview: TextButton & {
+		UIPadding: UIPadding;
+		UIStroke: UIStroke;
+	};
+};
+
 export type UILane = CanvasGroup & {
 	UIPadding: UIPadding;
 	Notes: Frame;
@@ -244,6 +370,7 @@ export type UIMain = ScreenGui & {
 	ComboCounter: UIComboCounter;
 	AccuracyDisplay: UIAccuracyDisplay;
 	InfoHUD: UIInfoHUD;
+	Editor: UIEditor;
 	DebugHUD: UIDebugHUD;
 };
 
@@ -322,7 +449,7 @@ export type NoteObject =
 
 export type EventObject = {};
 
-export interface Chart {
+export type Chart = {
 	metadata: {
 		title: string;
 		audioName: string;

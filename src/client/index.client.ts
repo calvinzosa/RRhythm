@@ -1,6 +1,7 @@
 import {
 	Players,
 	ReplicatedStorage,
+	RunService,
 	Workspace,
 } from '@rbxts/services';
 
@@ -9,7 +10,8 @@ import { $print, $package } from 'rbxts-transform-debug';
 import { Constants } from 'shared/Constants';
 import * as Types from 'shared/Types';
 import * as OsuBeatmapConverter from 'shared/OsuBeatmapConverter';
-import * as Gameplay from './MainGameplay';
+import * as MainGameplay from './MainGameplay';
+import * as Editor from './Editor';
 import * as UserInput from './UserInput';
 import * as Preloader from './Preloader';
 
@@ -23,6 +25,12 @@ UserInput.init();
 Preloader.preload();
 
 const cachedCharts = new Map<ModuleScript, Types.Chart>();
+
+if (RunService.IsStudio()) {
+	const editorToggleKeybind = new UserInput.Hotkey('DevToggleEditor', Enum.KeyCode.O);
+	
+	editorToggleKeybind.onPress(() => Editor.init());
+}
 
 function promptTriggered(prompt: ProximityPrompt, stage: Types.StageModel, playerNumber: number) {
 	if (!player.Character) return;
@@ -56,7 +64,7 @@ stagesFolder.DescendantAdded.Connect((stage) => {
 
 (eventsFolder.WaitForChild('StartSongSelection') as RemoteEvent).OnClientEvent.Connect(async () => {
 	while (true) {
-		const selectedSong = await Gameplay.startSongSelection();
+		const selectedSong = await MainGameplay.startSongSelection();
 		
 		const didSelect: string | false = eventsFolder.ChooseSong.InvokeServer(selectedSong);
 		if (didSelect === 'selected' || selectedSong === '<Exit>') break;
@@ -65,22 +73,22 @@ stagesFolder.DescendantAdded.Connect((stage) => {
 });
 
 (eventsFolder.WaitForChild('EndSongSelection') as RemoteEvent).OnClientEvent.Connect(() => {
-	Gameplay.endSongSelection();
+	MainGameplay.endSongSelection();
 });
 
 (eventsFolder.WaitForChild('StageStartSong') as RemoteEvent).OnClientEvent.Connect(async (data: ModuleScript, stage: Types.StageModel) => {
-	const chart = Gameplay.loadSongModule(data);
-	const stats = await Gameplay.start(chart, data.Parent as Folder, stage, true, false);
+	const chart = MainGameplay.loadSongModule(data);
+	const stats = await MainGameplay.start(chart, data.Parent as Folder, stage, true, false);
 	
-	Gameplay.showGrade(chart, ...stats);
+	MainGameplay.showGrade(chart, ...stats);
 });
 
 (eventsFolder.WaitForChild('UpdateStagePreview') as RemoteEvent).OnClientEvent.Connect((preview: Types.StagePreview, updateData: string, module: ModuleScript) => {
 	if (!preview.GetAttribute(Constants.Attributes.StagePreview.IsOngoing)) return;
 	
-	if (!cachedCharts.has(module)) cachedCharts.set(module, Gameplay.loadSongModule(module));
+	if (!cachedCharts.has(module)) cachedCharts.set(module, MainGameplay.loadSongModule(module));
 	
-	Gameplay.updatePreview(preview, module.Parent as Folder, updateData, cachedCharts.get(module)!);
+	MainGameplay.updatePreview(preview, module.Parent as Folder, updateData, cachedCharts.get(module)!);
 });
 
 (eventsFolder.WaitForChild('EndStagePreview') as RemoteEvent).OnClientEvent.Connect((preview: Types.StagePreview) => {

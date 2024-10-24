@@ -391,7 +391,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			finish()
 		end
 		isPlaying = true
-		print("[src/client/MainGameplay.ts:368]", "Initializing gameplay...")
+		print("[src/client/MainGameplay.ts:367]", "Initializing gameplay...")
 		local selectedSkinFolder = skinsFolder:WaitForChild(selectedNoteSkin, 5)
 		if not selectedSkinFolder then
 			selectedSkinFolder = skinsFolder:WaitForChild("Circles V1")
@@ -413,7 +413,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 					}
 				end
 			end, function(err)
-				warn("[src/client/MainGameplay.ts:391]", `Error while parsing sub key folder '{subKeyFolder}' - {err}`)
+				warn("[src/client/MainGameplay.ts:390]", `Error while parsing sub key folder '{subKeyFolder}' - {err}`)
 			end)
 		end
 		for i = 1, chart.metadata.totalLanes do
@@ -444,7 +444,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			Size = UDim2.new(1, 0, 1, 0),
 		}):Play()
 		task.wait(1)
-		print("[src/client/MainGameplay.ts:426]", "Finished transition")
+		print("[src/client/MainGameplay.ts:425]", "Finished transition")
 		averageError[1] = 0
 		averageError[2] = 0
 		table.clear(allHitErrors[1])
@@ -499,7 +499,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			table.insert(laneHotkeys, hotkey)
 		end
 		screenGui.Lanes.Visible = true
-		print("[src/client/MainGameplay.ts:487]", `Created {totalLanes} lanes and binded {#laneHotkeys} keys`)
+		print("[src/client/MainGameplay.ts:486]", `Created {totalLanes} lanes and binded {#laneHotkeys} keys`)
 		startTime = os.clock() + 4
 		local countdown = 3
 		local heldNotes = {}
@@ -519,7 +519,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 		end)
 		for i, note in ipairs(chart.notes) do
 			if note.lane < 0 or note.lane >= totalLanes then
-				warn("[src/client/MainGameplay.ts:509]", `> Note #{i} is not in a valid lane ({note.lane}), the mininum is 0 and the maximum is {totalLanes - 1}`)
+				warn("[src/client/MainGameplay.ts:508]", `> Note #{i} is not in a valid lane ({note.lane}), the mininum is 0 and the maximum is {totalLanes - 1}`)
 				continue
 			end
 			if note.type == 0 then
@@ -555,7 +555,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			_condition_1 = 1
 		end
 		scrollSpeed = _condition_1
-		print("[src/client/MainGameplay.ts:536]", `Loaded {#heldNotes} notes, {#heldTimings} timings, and {#heldEvents} events in {string.format("%.4f", (os.clock() - loadStartTime) / 1000)}ms`)
+		print("[src/client/MainGameplay.ts:535]", `Loaded {#heldNotes} notes, {#heldTimings} timings, and {#heldEvents} events in {string.format("%.4f", (os.clock() - loadStartTime) / 1000)}ms`)
 		TS.try(function()
 			RunService:UnbindFromRenderStep("GameplayUpdate")
 		end, function(err) end)
@@ -570,7 +570,7 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 		camera.CameraType = Enum.CameraType.Scriptable
 		camera.CFrame = stage.Camera.CFrame
 		task.wait(1)
-		print("[src/client/MainGameplay.ts:558]", "Finished second transition")
+		print("[src/client/MainGameplay.ts:557]", "Finished second transition")
 		local lastPreviewUpdateTime = os.clock()
 		TS.try(function()
 			eventsFolder.UpdateStagePreview:FireServer(Compression:compress(`0,nan,0,0,{bpm},{scrollSpeed}|`))
@@ -911,12 +911,12 @@ local function start(chart, songFolder, stage, debugMode, autoplay)
 			camera.CameraType = Enum.CameraType.Scriptable
 			camera.CFrame = stage.Camera.CFrame
 		end)
-		print("[src/client/MainGameplay.ts:877]", "Binded main gameplay loop")
+		print("[src/client/MainGameplay.ts:876]", "Binded main gameplay loop")
 	end)
 end
 function finish()
 	return TS.Promise.new(function(resolve)
-		print("[src/client/MainGameplay.ts:883]", "Finishing gameplay...")
+		print("[src/client/MainGameplay.ts:882]", "Finishing gameplay...")
 		TS.try(function()
 			RunService:UnbindFromRenderStep("GameplayUpdate")
 		end, function(err) end)
@@ -945,7 +945,7 @@ function finish()
 		end
 		Utils.destroyAfter(laneFrames, info.Time)
 		table.clear(laneFrames)
-		print("[src/client/MainGameplay.ts:925]", "Cleared lanes")
+		print("[src/client/MainGameplay.ts:924]", "Cleared lanes")
 		isPlaying = false
 		TweenService:Create(screenGui.ComboCounter, info, {
 			GroupTransparency = 1,
@@ -967,7 +967,7 @@ function finish()
 		local _uDim2_1 = UDim2.new(-2, 0, 0, 0)
 		_object_1[_left_1] = _position_1 + _uDim2_1
 		TweenService:Create(_exp_1, info, _object_1):Play()
-		print("[src/client/MainGameplay.ts:945]", "Cleared UI")
+		print("[src/client/MainGameplay.ts:944]", "Cleared UI")
 		task.wait(info.Time)
 		if not isPlaying then
 			screenGui.Lanes.Visible = false
