@@ -22,6 +22,7 @@ check(game, 1)s..='};\n'print(s)
 // Standard Types
 
 export type Grade = 'X' | 'S' | 'A' | 'B' | 'C' | 'D';
+export type RoundStats = [ number, number, number, number, number, number, number, number, number, number, number ];
 
 // Replicated Storage
 
@@ -266,12 +267,17 @@ export type UIEditor = Frame & {
 	Content: Frame & {
 		Tabs: Frame & {
 			Content: Frame & {
+				UIListLayout: UIListLayout;
 				Metadata: TextButton & {
 					UIFlexItem: UIFlexItem;
 					UIPadding: UIPadding;
 					Underline: Frame;
 				};
-				UIListLayout: UIListLayout;
+				View: TextButton & {
+					UIFlexItem: UIFlexItem;
+					UIPadding: UIPadding;
+					Underline: Frame;
+				};
 				Timings: TextButton & {
 					UIFlexItem: UIFlexItem;
 					UIPadding: UIPadding;
@@ -308,6 +314,13 @@ export type UIEditor = Frame & {
 			Artist: UIEditorTextInput;
 			Mappers: UIEditorList;
 			Tags: UIEditorList;
+		};
+		View: ScrollingFrame & {
+			UIListLayout: UIListLayout;
+			UIPadding: UIPadding;
+			BeatSnapDivisor: UIEditorTextInput;
+			LaneWidth: UIEditorTextInput;
+			HitPosition: UIEditorTextInput;
 		};
 		Timings: ScrollingFrame & {
 			UIListLayout: UIListLayout;

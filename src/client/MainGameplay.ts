@@ -14,6 +14,8 @@ import * as Utils from 'shared/Utils';
 import { Constants } from 'shared/Constants';
 import LZWCompression from 'shared/LZWCompression';
 
+export let isPlaying = false;
+
 const Compression = new LZWCompression();
 
 const eventsFolder = ReplicatedStorage.WaitForChild('Events') as Types.EventsFolder;
@@ -39,14 +41,17 @@ const laneFrames: Types.UILane[] = [];
 const averageError = [0, 0];
 const allHitErrors = [[] as number[], [] as number[]];
 const hitPositions = [0, 0, 0, 0];
+const laneTemplates: { Note: Types.UINote, HoldNote: Types.UIBodyNote, TailNote: Types.UITailNote, BodyNote: Types.UIBodyNote, Lane: Types.UILane }[] = [];
 
 let devAutoPlay = false;
+let useAutoplay = false;
+let useDebugMode = false;
 let originalCameraCFrame: CFrame = CFrame.identity;
 let bindedKeys = [Enum.KeyCode.Q, Enum.KeyCode.W, Enum.KeyCode.LeftBracket, Enum.KeyCode.RightBracket];
 let laneWidth = 75;
 let lanePadding = 1;
 let noteSpeed = 10;
-let selectedNoteSkin = 'CirclesV1';
+let selectedNoteSkin = 'Editor';
 let maxVisibleNotes = 200;
 
 let accuracyFormat = '<stroke thickness="2" color="#000" joins="miter"><b>%s</b></stroke>';
@@ -65,7 +70,23 @@ let highestCombo = 0;
 let bpm = 0;
 let scrollSpeed = 0;
 let endTime = 0;
-let isPlaying = false;
+
+let startTime = os.clock() + 4;
+let countdown = 3;
+
+let heldNotes: Types.NoteObject[] = [];
+let heldTimings: Types.TimingObject[] = [];
+let heldEvents: Types.EventObject[] = [];
+let createdNotes: Types.CreatedNote[] = [];
+let createdNoteId = 0;
+
+let loadStartTime = os.clock();
+let lastPreviewUpdateTime = os.clock();
+
+let stageModel: Types.StageModel | undefined = undefined;
+let music: Sound | undefined = undefined;
+
+let startResolve: ((value: Types.RoundStats | Promise<Types.RoundStats>) => void) | undefined = undefined;
 
 if (RunService.IsStudio()) {
 	const toggleAutoplay = new UserInput.Hotkey('ToggleAutoplay', Enum.KeyCode.M);
@@ -383,9 +404,7 @@ export function parseSubKeyName(name: string, keyCount: number) {
 }
 
 export function start(chart: Types.Chart, songFolder: Folder, stage: Types.StageModel, debugMode: boolean, autoplay: boolean) {
-	return new Promise<[number, number, number, number, number, number, number, number, number, number, number]>((resolve) => {
-		if (!table.isfrozen(chart)) Utils.deepFreeze(chart);
-		
+	return new Promise<Types.RoundStats>((resolve) => {
 		if (isPlaying) finish();
 		isPlaying = true;
 		
@@ -394,7 +413,7 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 		let selectedSkinFolder = skinsFolder.WaitForChild(selectedNoteSkin, 5) as Types.SkinFolder | undefined;
 		if (!selectedSkinFolder) selectedSkinFolder = skinsFolder.WaitForChild('Circles V1') as Types.SkinFolder;
 		
-		const laneTemplates: { Note: Types.UINote, HoldNote: Types.UIBodyNote, TailNote: Types.UITailNote, BodyNote: Types.UIBodyNote, Lane: Types.UILane }[] = [];
+		laneTemplates.clear();
 		
 		for (const subKeyFolder of selectedSkinFolder.GetChildren()) {
 			if (!subKeyFolder.IsA('Folder')) continue;
@@ -471,7 +490,24 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 		scrollSpeed = 1;
 		endTime = 0;
 		
-		if (debugMode) screenGui.DebugHUD.Visible = true;
+		startTime = os.clock() + 4;
+		countdown = 3;
+		
+		heldNotes.clear();
+		heldTimings.clear();
+		heldEvents.clear();
+		createdNotes.clear();
+		createdNoteId = 0;
+		
+		loadStartTime = os.clock();
+		lastPreviewUpdateTime = os.clock();
+		
+		stageModel = stage;
+		
+		useAutoplay = autoplay;
+		useDebugMode = debugMode;
+		
+		if (useDebugMode) screenGui.DebugHUD.Visible = true;
 		
 		screenGui.ComboCounter.Combo.Text = string.format(comboFormat, 0);
 		screenGui.ComboCounter.Visible = true;
@@ -509,17 +545,6 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 		screenGui.Lanes.Visible = true;
 		
 		$print(`Created ${totalLanes} lanes and binded ${laneHotkeys.size()} keys`);
-		
-		const startTime = os.clock() + 4;
-		let countdown = 3;
-		
-		const heldNotes: Types.NoteObject[] = [];
-		const heldTimings: Types.TimingObject[] = [];
-		const heldEvents: Types.EventObject[] = [];
-		const createdNotes: Types.CreatedNote[] = [];
-		let createdNoteId = 0;
-		
-		const loadStartTime = os.clock();
 		
 		for (const [, timing] of ipairs(chart.timings)) {
 			heldTimings.push(timing);
@@ -559,11 +584,7 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 		
 		$print(`Loaded ${heldNotes.size()} notes, ${heldTimings.size()} timings, and ${heldEvents.size()} events in ${string.format('%.4f', (os.clock() - loadStartTime) / 1000)}ms`);
 		
-		try {
-			RunService.UnbindFromRenderStep('GameplayUpdate');
-		} catch (err) {  }
-		
-		const music = songFolder.WaitForChild(chart.metadata.audioName) as Sound;
+		music = songFolder.WaitForChild(chart.metadata.audioName) as Sound;
 		
 		screenGui.Transition.Size = new UDim2(1, 0, 1, 0);
 		screenGui.Transition.Position = new UDim2(1, 0, 0, 0);
@@ -581,342 +602,362 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 		
 		$print('Finished second transition');
 		
-		let lastPreviewUpdateTime = os.clock();
-		
 		try {
 			eventsFolder.UpdateStagePreview.FireServer(Compression.compress(`0,nan,0,0,${bpm},${scrollSpeed}|`));
 		} catch (err) {  }
 		
-		RunService.BindToRenderStep('GameplayUpdate', Enum.RenderPriority.Last.Value, (dt) => {
-			for (const hotkey of laneHotkeys) {
-				if (autoplay || devAutoPlay) hotkey.canPress = false;
-			}
-			
-			const currentTime = os.clock();
-			const elapsedTime = math.floor((currentTime - startTime) * 1000);
-			
-			// scrollSpeed = 1;
-			// bpm = 250;
-			
-			// hitPosition = 480 - (((elapsedTime / 1000) * calculateActualNoteSpeed(noteSpeed, bpm, scrollSpeed) * 2) / camera.ViewportSize.Y * 240) % 240;
-			// for (const lane of laneFrames) lane.JudgementLine.Position = new UDim2(0.5, 0, hitPosition / 480, 0);
-			
-			if (countdown > 0) {
-				if (countdown === 3 && elapsedTime >= -2000) {
-					countdown = 2;
-					
-					screenGui.AccuracyDisplay.Accuracy.Text = string.format(accuracyFormat, '2');
-					updateHUD(false, true);
-				} else if (countdown === 2 && elapsedTime >= -1000) {
-					countdown = 1;
-					
-					screenGui.AccuracyDisplay.Accuracy.Text = string.format(accuracyFormat, '1');
-					updateHUD(false, true);
-				} else if (countdown === 1 && elapsedTime >= 0) {
-					countdown = 0;
-				}
-			}
-			
-			if (elapsedTime >= 0) {
-				if (heldNotes.size() === 0) {
-					if (createdNotes.size() === 0 || !music.IsPlaying) {
-						RunService.UnbindFromRenderStep('GameplayUpdate');
-						
-						task.delay(4, async () => resolve(await finish()));
-						
-						return;
-					}
-				} else if (!music.IsPlaying) music.Play();
-			}
-			
-			let totalRemoves = 0;
-			
-			for (const [, noteData] of ipairs(heldNotes)) {
-				if (createdNotes.size() >= maxVisibleNotes) break;
-				
-				const hitPosition = hitPositions[noteData.lane];
-				const laneHeight = laneFrames[noteData.lane].AbsoluteSize.Y;
-				const yPosition = calculateYPosition(elapsedTime, noteData, noteSpeed, bpm, scrollSpeed, laneHeight, hitPosition, heldTimings);
-				
-				if (yPosition >= 0 && yPosition <= laneHeight + laneWidth) {
-					totalRemoves++;
-					
-					const laneContainer = laneFrames[noteData.lane];
-					const template = laneTemplates[noteData.lane];
-					
-					if (noteData.type === 0) {
-						const newNote = template.Note.Clone();
-						newNote.Position = new UDim2(0, 0, 0, 0);
-						newNote.AnchorPoint = new Vector2(0, 1);
-						newNote.Parent = laneContainer.Notes;
-						
-						createdNotes.push({ note: newNote, noteData: noteData, isTailNote: false, isHoldNote: false, didAutoPress: false, didPress: false, id: createdNoteId });
-						createdNoteId++;
-					} else if (noteData.type === 1) {
-						const group = new Instance('CanvasGroup');
-						group.Position = new UDim2(0, 0, 0, 0);
-						group.Size = new UDim2(1, 0, 1, 0);
-						group.BackgroundTransparency = 1;
-						
-						const holdNote = template.HoldNote.Clone();
-						holdNote.Position = new UDim2(0, 0, 0, 0);
-						holdNote.AnchorPoint = new Vector2(0, 1);
-						holdNote.Parent = group;
-						
-						const tailNote = template.TailNote.Clone();
-						tailNote.Position = new UDim2(0, 0, 0, 0);
-						tailNote.AnchorPoint = new Vector2(0, 1);
-						tailNote.Parent = group;
-						
-						const bodyNote = template.BodyNote.Clone();
-						bodyNote.Position = new UDim2(0, 0, 0, 0);
-						bodyNote.AnchorPoint = new Vector2(0, 0);
-						bodyNote.Parent = group;
-						
-						group.Parent = laneContainer.Notes;
-						
-						const holdObject: Types.HoldCreatedNote = {
-							note: holdNote,
-							bodyNote: bodyNote,
-							noteData: {
-								type: 1,
-								holdLength: noteData.holdLength,
-								lane: noteData.lane,
-								millisecond: noteData.millisecond
-							},
-							isTailNote: false,
-							isHoldNote: true,
-							isHeld: false,
-							didPress: false,
-							didAutoPress: false,
-							isReleased: false,
-							tailNote: undefined,
-							id: createdNoteId,
-						};
-						
-						createdNoteId++;
-						
-						const tailObject: Types.TailCreatedNote = {
-							note: tailNote,
-							noteData: {
-								type: 1,
-								holdLength: noteData.holdLength,
-								lane: noteData.lane,
-								millisecond: noteData.millisecond + noteData.holdLength
-							},
-							isTailNote: true,
-							isHoldNote: false,
-							didAutoPress: false,
-							didPress: false,
-							holdNote: holdObject,
-							id: createdNoteId
-						};
-						
-						createdNoteId++;
-						
-						holdObject.tailNote = tailObject;
-						
-						createdNotes.push(holdObject, tailObject);
-					}
-				} else break;
-			}
-			
-			for (const _ of $range(1, totalRemoves)) heldNotes.remove(0);
-			
-			const removeIndices: number[] = [];
-			
-			for (let [i, { noteData, note }] of ipairs(createdNotes)) {
-				const noteObject = createdNotes[i - 1];
-				const laneHeight = laneFrames[noteData.lane].AbsoluteSize.Y;
-				
-				if (noteObject.didPress) {
-					removeIndices.push(i);
-					continue;
-				}
-				
-				const hitPosition = hitPositions[noteData.lane];
-				
-				const yOffset = calculateYPosition(elapsedTime, noteData, noteSpeed, bpm, scrollSpeed, laneHeight, hitPosition, heldTimings);
-				const hitOffset = noteData.millisecond - elapsedTime;
-				const hitPercentage = hitOffset > 0 ? hitOffset / maxAccuracy : hitOffset / minAccuracy;
-				
-				if ((autoplay || devAutoPlay) && hitPercentage <= 0.1) {
-					const hotkey = laneHotkeys[noteData.lane];
-					
-					if (noteData.type === 0) {
-						hotkey.release();
-						hotkey.press();
-						hotkey.release();
-					} else if (noteData.type === 1) {
-						if (noteObject.isHoldNote && !noteObject.didAutoPress) {
-							hotkey.release();
-							hotkey.press();
-							noteObject.didAutoPress = true;
-						}
-						
-						if (noteObject.isTailNote && !noteObject.didAutoPress) {
-							hotkey.release();
-							noteObject.didAutoPress = true;
-						}
-					}
-				}
-				
-				if (noteObject.isHoldNote && note.Parent !== undefined) {
-					if (noteObject.isReleased) (note.Parent as CanvasGroup).GroupTransparency = 0.5;
-					else (note.Parent as CanvasGroup).GroupTransparency = 0;
-				}
-				
-				note.Position = new UDim2(0, 0, 0, yOffset);
-				
-				if (noteObject.isHoldNote) {
-					if (noteObject.isHeld && !noteObject.isReleased) note.Position = new UDim2(0, 0, 0, laneHeight * (hitPosition / 480));
-					else {
-						if (elapsedTime >= noteData.millisecond + maxAccuracy && !noteObject.isReleased) {
-							noteObject.isReleased = true;
-							
-							noteCombo = 0;
-							notesMisses++;
-							
-							screenGui.AccuracyDisplay.Accuracy.Text = string.format(accuracyFormat, 'Miss');
-							
-							updateHUD(true, true);
-						}
-					}
-					
-					let topOffset = calculateYPosition(elapsedTime, noteObject.tailNote!.noteData, noteSpeed, bpm, scrollSpeed, laneHeight, hitPosition, heldTimings);
-					let bottomOffset = note.Position.Y.Offset;
-					
-					if (typeIs(noteObject.bodyNote.GetAttribute('OffsetTop'), 'number')) {
-						topOffset += math.round(laneWidth * (noteObject.bodyNote.GetAttribute('OffsetTop') as number));
-					}
-					
-					if (typeIs(noteObject.bodyNote.GetAttribute('OffsetBottom'), 'number')) {
-						bottomOffset += math.round(laneWidth * (noteObject.bodyNote.GetAttribute('OffsetBottom') as number));
-					}
-					
-					noteObject.bodyNote.Position = new UDim2(0, 0, 0, topOffset);
-					noteObject.bodyNote.Size = new UDim2(1, 0, 0, bottomOffset - topOffset);
-				} else if (noteObject.isTailNote && noteObject.holdNote?.isHeld && yOffset >= laneHeight * (hitPosition / 480)) {
-					hitNote(0, i, note, noteObject, createdNotes);
-					heldLanes.delete(noteData.lane + 1);
-				}
-				
-				if ((!noteObject.isHoldNote && !noteObject.isTailNote) || (noteObject.isTailNote && noteObject.holdNote?.isReleased)) {
-					if (elapsedTime >= noteData.millisecond + maxAccuracy) {
-						if (autoplay || devAutoPlay) laneHotkeys[noteData.lane].release();
-						
-						let doMiss = true;
-						if (noteObject.isTailNote && noteObject.holdNote !== undefined) {
-							if (noteObject.holdNote.isReleased) doMiss = false;
-							
-							note.Parent?.Destroy();
-							
-							const holdIndex = createdNotes.indexOf(noteObject.holdNote);
-							if (holdIndex >= 0 && !removeIndices.includes(holdIndex)) removeIndices.push(holdIndex + 1);
-						}
-						
-						if (doMiss) {
-							noteCombo = 0;
-							notesMisses++;
-							
-							screenGui.AccuracyDisplay.Accuracy.Text = string.format(accuracyFormat, 'Miss');
-							
-							updateHUD(true, true);
-						}
-						
-						note.Destroy();
-						if (!removeIndices.includes(i)) removeIndices.push(i);
-					}
-				}
-			}
-			
-			removeIndices.sort((a, b) => a > b);
-			for (const index of removeIndices) {
-				const removedNote = createdNotes.remove(index - 1);
-				if (removedNote !== undefined) {
-					removedNote.note.Destroy();
-					if (removedNote.isHoldNote || removedNote.isTailNote) {
-						if (removedNote.isHoldNote) removedNote.bodyNote.Destroy();
-						
-						removedNote.note.Parent?.Destroy();
-					}
-				}
-			}
-			
-			for (const [i, timing] of ipairs(heldTimings)) {
-				if (elapsedTime >= timing.millisecond) {
-					if (timing.type === 0) {
-						if (timing.bpm !== undefined) bpm = timing.bpm;
-						if (timing.scrollSpeed !== undefined) scrollSpeed = timing.scrollSpeed;
-					}
-					
-					heldTimings.remove(i - 1);
-				} else break;
-			}
-			
-			if (os.clock() - lastPreviewUpdateTime > 0.067) {
-				const accuracy = calculateAccuracy(notesMax, notes300, notes200, notes100, notes50, notesMisses);
-				let previewData = `${totalScore},${math.round(accuracy * 100)},${notesMisses},${noteCombo},${selectedNoteSkin}|`;
-				
-				for (const note of createdNotes) {
-					const laneHeight = laneFrames[note.noteData.lane].AbsoluteSize.Y;
-					const position = note.note.Position.Y.Offset;
-					
-					previewData += `${note.noteData.lane},${math.round((position / laneHeight) * 1000)},${note.isTailNote ? 1 : note.isHoldNote ? 2 : 0},${note.id}|`;
-				}
-				
-				eventsFolder.UpdateStagePreview.FireServer(Compression.compress(previewData));
-				
-				lastPreviewUpdateTime = os.clock();
-			}
-			
-			if (debugMode) {
-				const pressedNotes: string[] = [];
-				for (const hotkey of laneHotkeys) pressedNotes.push(hotkey.isPressed ? '1' : '0');
-				
-				let minutes = elapsedTime.idiv(60_000);
-				let seconds = (elapsedTime / 1_000) % 60;
-				let milliseconds = elapsedTime % 1000;
-				
-				if (elapsedTime < 0) {
-					minutes = math.ceil(elapsedTime / 60_000);
-					seconds = 60 - seconds;
-					milliseconds = 1000 - milliseconds;
-					screenGui.DebugHUD.Time.TextColor3 = Color3.fromRGB(255, 255, 0);
-				} else screenGui.DebugHUD.Time.TextColor3 = Color3.fromRGB(255, 255, 255);
-				
-				screenGui.DebugHUD.NoteSpeed.Text = string.format('NoteSpeed: %.1f', noteSpeed);
-				screenGui.DebugHUD.ScrollSpeed.Text = string.format('ScrollSpeed: %.3fx', scrollSpeed);
-				screenGui.DebugHUD.BPM.Text = string.format('BPM: %.3fBPM', bpm);
-				screenGui.DebugHUD.BPM.Text = string.format('BPM: %.3fBPM', bpm);
-				screenGui.DebugHUD.PixelsPerSecond.Text = string.format('Pixels/s: %dpx/s', calculateActualNoteSpeed(noteSpeed, bpm, scrollSpeed));
-				screenGui.DebugHUD.Time.Text = string.format('Time: %02d:%02d.%03d/%02d:%02d.%03d', minutes, seconds, milliseconds, endTime.idiv(60_000), (endTime / 1_000) % 60, endTime % 1000);
-				screenGui.DebugHUD.RenderedNotes.Text = string.format('RenderedNotes: %d', createdNotes.size());
-				screenGui.DebugHUD.PressedNotes.Text = `PressedNotes: ${pressedNotes.join(',')}`;
-				screenGui.DebugHUD.HitPosition.Text = string.format('HitPosition: %s', hitPositions.join(','));
-				screenGui.DebugHUD.AverageError.Text = string.format('AvgHitErr: %dms,%dms', averageError[0], averageError[1]);
-				screenGui.DebugHUD.Autoplay.Text = `Autoplay: ${autoplay || devAutoPlay}`;
-				screenGui.DebugHUD.NoteSkin.Text = `NoteSkin: ${selectedNoteSkin}`;
-				screenGui.DebugHUD.FPS.Text = string.format('FPS: %.2f', 1 / dt);
-			}
-			
-			camera.CameraType = Enum.CameraType.Scriptable;
-			camera.CFrame = stage.Camera.CFrame;
-		});
+		startResolve = resolve;
+		isPlaying = true;
 		
 		$print('Binded main gameplay loop');
 	});
 }
 
+export function gameUpdate(dt: number) {
+	if (music === undefined || stageModel === undefined) return;
+	
+	for (const hotkey of laneHotkeys) {
+		if (useAutoplay || devAutoPlay) hotkey.canPress = false;
+	}
+	
+	const currentTime = os.clock();
+	const elapsedTime = math.floor((currentTime - startTime) * 1000);
+	
+	// scrollSpeed = 1;
+	// bpm = 250;
+	
+	// hitPosition = 480 - (((elapsedTime / 1000) * calculateActualNoteSpeed(noteSpeed, bpm, scrollSpeed) * 2) / camera.ViewportSize.Y * 240) % 240;
+	// for (const lane of laneFrames) lane.JudgementLine.Position = new UDim2(0.5, 0, hitPosition / 480, 0);
+	
+	if (countdown > 0) {
+		if (countdown === 3 && elapsedTime >= -2000) {
+			countdown = 2;
+			
+			screenGui.AccuracyDisplay.Accuracy.Text = string.format(accuracyFormat, '2');
+			updateHUD(false, true);
+		} else if (countdown === 2 && elapsedTime >= -1000) {
+			countdown = 1;
+			
+			screenGui.AccuracyDisplay.Accuracy.Text = string.format(accuracyFormat, '1');
+			updateHUD(false, true);
+		} else if (countdown === 1 && elapsedTime >= 0) {
+			countdown = 0;
+		}
+	}
+	
+	if (elapsedTime >= 0) {
+		if (heldNotes.size() === 0) {
+			if (createdNotes.size() === 0 || !music.IsPlaying) {
+				isPlaying = false;
+				
+				task.delay(4, async () => {
+					const results = await finish();
+					if (startResolve !== undefined) startResolve(results);
+					startResolve = undefined;
+				});
+				
+				return;
+			}
+		} else if (!music.IsPlaying) music.Play();
+	}
+	
+	let totalRemoves = 0;
+	
+	for (const [, noteData] of ipairs(heldNotes)) {
+		if (createdNotes.size() >= maxVisibleNotes) break;
+		
+		const hitPosition = hitPositions[noteData.lane];
+		const laneHeight = laneFrames[noteData.lane].AbsoluteSize.Y;
+		const yPosition = calculateYPosition(elapsedTime, noteData, noteSpeed, bpm, scrollSpeed, laneHeight, hitPosition, heldTimings);
+		
+		if (yPosition >= 0 && yPosition <= laneHeight + laneWidth) {
+			totalRemoves++;
+			
+			const laneContainer = laneFrames[noteData.lane];
+			const template = laneTemplates[noteData.lane];
+			
+			if (noteData.type === 0) {
+				const newNote = template.Note.Clone();
+				newNote.Position = new UDim2(0, 0, 0, 0);
+				newNote.AnchorPoint = new Vector2(0, 1);
+				newNote.Parent = laneContainer.Notes;
+				
+				createdNotes.push({ note: newNote, noteData: noteData, isTailNote: false, isHoldNote: false, didAutoPress: false, didPress: false, id: createdNoteId });
+				createdNoteId++;
+			} else if (noteData.type === 1) {
+				const group = new Instance('CanvasGroup');
+				group.Position = new UDim2(0, 0, 0, 0);
+				group.Size = new UDim2(1, 0, 1, 0);
+				group.BackgroundTransparency = 1;
+				
+				const holdNote = template.HoldNote.Clone();
+				holdNote.Position = new UDim2(0, 0, 0, 0);
+				holdNote.AnchorPoint = new Vector2(0, 1);
+				holdNote.Parent = group;
+				
+				const tailNote = template.TailNote.Clone();
+				tailNote.Position = new UDim2(0, 0, 0, 0);
+				tailNote.AnchorPoint = new Vector2(0, 1);
+				tailNote.Parent = group;
+				
+				const bodyNote = template.BodyNote.Clone();
+				bodyNote.Position = new UDim2(0, 0, 0, 0);
+				bodyNote.AnchorPoint = new Vector2(0, 0);
+				bodyNote.Parent = group;
+				
+				group.Parent = laneContainer.Notes;
+				
+				const holdObject: Types.HoldCreatedNote = {
+					note: holdNote,
+					bodyNote: bodyNote,
+					noteData: {
+						type: 1,
+						holdLength: noteData.holdLength,
+						lane: noteData.lane,
+						millisecond: noteData.millisecond
+					},
+					isTailNote: false,
+					isHoldNote: true,
+					isHeld: false,
+					didPress: false,
+					didAutoPress: false,
+					isReleased: false,
+					tailNote: undefined,
+					id: createdNoteId,
+				};
+				
+				createdNoteId++;
+				
+				const tailObject: Types.TailCreatedNote = {
+					note: tailNote,
+					noteData: {
+						type: 1,
+						holdLength: noteData.holdLength,
+						lane: noteData.lane,
+						millisecond: noteData.millisecond + noteData.holdLength
+					},
+					isTailNote: true,
+					isHoldNote: false,
+					didAutoPress: false,
+					didPress: false,
+					holdNote: holdObject,
+					id: createdNoteId
+				};
+				
+				createdNoteId++;
+				
+				holdObject.tailNote = tailObject;
+				
+				createdNotes.push(holdObject, tailObject);
+			}
+		} else break;
+	}
+	
+	for (const _ of $range(1, totalRemoves)) heldNotes.remove(0);
+	
+	const removeIndices: number[] = [];
+	
+	for (let [i, { noteData, note }] of ipairs(createdNotes)) {
+		const noteObject = createdNotes[i - 1];
+		const laneHeight = laneFrames[noteData.lane].AbsoluteSize.Y;
+		
+		if (noteObject.didPress) {
+			removeIndices.push(i);
+			continue;
+		}
+		
+		const hitPosition = hitPositions[noteData.lane];
+		
+		const yOffset = calculateYPosition(elapsedTime, noteData, noteSpeed, bpm, scrollSpeed, laneHeight, hitPosition, heldTimings);
+		const hitOffset = noteData.millisecond - elapsedTime;
+		const hitPercentage = hitOffset > 0 ? hitOffset / maxAccuracy : hitOffset / minAccuracy;
+		
+		if ((useAutoplay || devAutoPlay) && hitPercentage <= 0.1) {
+			const hotkey = laneHotkeys[noteData.lane];
+			
+			if (noteData.type === 0) {
+				hotkey.release();
+				hotkey.press();
+				hotkey.release();
+			} else if (noteData.type === 1) {
+				if (noteObject.isHoldNote && !noteObject.didAutoPress) {
+					hotkey.release();
+					hotkey.press();
+					noteObject.didAutoPress = true;
+				}
+				
+				if (noteObject.isTailNote && !noteObject.didAutoPress) {
+					hotkey.release();
+					noteObject.didAutoPress = true;
+				}
+			}
+		}
+		
+		if (noteObject.isHoldNote && note.Parent !== undefined) {
+			if (noteObject.isReleased) (note.Parent as CanvasGroup).GroupTransparency = 0.5;
+			else (note.Parent as CanvasGroup).GroupTransparency = 0;
+		}
+		
+		note.Position = new UDim2(0, 0, 0, yOffset);
+		
+		if (noteObject.isHoldNote) {
+			if (noteObject.isHeld && !noteObject.isReleased) note.Position = new UDim2(0, 0, 0, laneHeight * (hitPosition / 480));
+			else {
+				if (elapsedTime >= noteData.millisecond + maxAccuracy && !noteObject.isReleased) {
+					noteObject.isReleased = true;
+					
+					noteCombo = 0;
+					notesMisses++;
+					
+					screenGui.AccuracyDisplay.Accuracy.Text = string.format(accuracyFormat, 'Miss');
+					
+					updateHUD(true, true);
+				}
+			}
+			
+			let topOffset = calculateYPosition(elapsedTime, noteObject.tailNote!.noteData, noteSpeed, bpm, scrollSpeed, laneHeight, hitPosition, heldTimings);
+			let bottomOffset = note.Position.Y.Offset;
+			
+			if (typeIs(noteObject.bodyNote.GetAttribute('OffsetTop'), 'number')) {
+				topOffset += math.round(laneWidth * (noteObject.bodyNote.GetAttribute('OffsetTop') as number));
+			}
+			
+			if (typeIs(noteObject.bodyNote.GetAttribute('OffsetBottom'), 'number')) {
+				bottomOffset += math.round(laneWidth * (noteObject.bodyNote.GetAttribute('OffsetBottom') as number));
+			}
+			
+			noteObject.bodyNote.Position = new UDim2(0, 0, 0, topOffset);
+			noteObject.bodyNote.Size = new UDim2(1, 0, 0, bottomOffset - topOffset);
+		} else if (noteObject.isTailNote && noteObject.holdNote?.isHeld && yOffset >= laneHeight * (hitPosition / 480)) {
+			hitNote(0, i, note, noteObject, createdNotes);
+			heldLanes.delete(noteData.lane + 1);
+		}
+		
+		if ((!noteObject.isHoldNote && !noteObject.isTailNote) || (noteObject.isTailNote && noteObject.holdNote?.isReleased)) {
+			if (elapsedTime >= noteData.millisecond + maxAccuracy) {
+				if (useAutoplay || devAutoPlay) laneHotkeys[noteData.lane].release();
+				
+				let doMiss = true;
+				if (noteObject.isTailNote && noteObject.holdNote !== undefined) {
+					if (noteObject.holdNote.isReleased) doMiss = false;
+					
+					note.Parent?.Destroy();
+					
+					const holdIndex = createdNotes.indexOf(noteObject.holdNote);
+					if (holdIndex >= 0 && !removeIndices.includes(holdIndex)) removeIndices.push(holdIndex + 1);
+				}
+				
+				if (doMiss) {
+					noteCombo = 0;
+					notesMisses++;
+					
+					screenGui.AccuracyDisplay.Accuracy.Text = string.format(accuracyFormat, 'Miss');
+					
+					updateHUD(true, true);
+				}
+				
+				note.Destroy();
+				if (!removeIndices.includes(i)) removeIndices.push(i);
+			}
+		}
+	}
+	
+	removeIndices.sort((a, b) => a > b);
+	for (const index of removeIndices) {
+		const removedNote = createdNotes.remove(index - 1);
+		if (removedNote !== undefined) {
+			removedNote.note.Destroy();
+			if (removedNote.isHoldNote || removedNote.isTailNote) {
+				if (removedNote.isHoldNote) removedNote.bodyNote.Destroy();
+				
+				removedNote.note.Parent?.Destroy();
+			}
+		}
+	}
+	
+	for (const [i, timing] of ipairs(heldTimings)) {
+		if (elapsedTime >= timing.millisecond) {
+			if (timing.type === 0) {
+				if (timing.bpm !== undefined) bpm = timing.bpm;
+				if (timing.scrollSpeed !== undefined) scrollSpeed = timing.scrollSpeed;
+			}
+			
+			heldTimings.remove(i - 1);
+		} else break;
+	}
+	
+	if (os.clock() - lastPreviewUpdateTime > 0.067) {
+		const accuracy = calculateAccuracy(notesMax, notes300, notes200, notes100, notes50, notesMisses);
+		let previewData = `${totalScore},${math.round(accuracy * 100)},${notesMisses},${noteCombo},${selectedNoteSkin}|`;
+		
+		for (const note of createdNotes) {
+			const laneHeight = laneFrames[note.noteData.lane].AbsoluteSize.Y;
+			const position = note.note.Position.Y.Offset;
+			
+			previewData += `${note.noteData.lane},${math.round((position / laneHeight) * 1000)},${note.isTailNote ? 1 : note.isHoldNote ? 2 : 0},${note.id}|`;
+		}
+		
+		eventsFolder.UpdateStagePreview.FireServer(Compression.compress(previewData));
+		
+		lastPreviewUpdateTime = os.clock();
+	}
+	
+	for (const [i, note] of ipairs(createdNotes)) {
+		const laneHeight = laneFrames[note.noteData.lane].AbsoluteSize.Y;
+		const hitPosition = hitPositions[note.noteData.lane];
+		
+		if (note.noteData.millisecond >= elapsedTime
+			&& calculateYPosition(elapsedTime, note.noteData, noteSpeed, bpm, scrollSpeed, laneHeight, hitPosition, heldTimings) >= laneHeight * 1.5
+		) {
+			note.note.Destroy();
+			createdNotes.remove(i - 1);
+		}
+	}
+	
+	if (useDebugMode) {
+		const pressedNotes: string[] = [];
+		for (const hotkey of laneHotkeys) pressedNotes.push(hotkey.isPressed ? '1' : '0');
+		
+		let minutes = elapsedTime.idiv(60_000);
+		let seconds = (elapsedTime / 1_000) % 60;
+		let milliseconds = elapsedTime % 1000;
+		
+		if (elapsedTime < 0) {
+			minutes = math.ceil(elapsedTime / 60_000);
+			seconds = 60 - seconds;
+			milliseconds = 1000 - milliseconds;
+			screenGui.DebugHUD.Time.TextColor3 = Color3.fromRGB(255, 255, 0);
+		} else screenGui.DebugHUD.Time.TextColor3 = Color3.fromRGB(255, 255, 255);
+		
+		screenGui.DebugHUD.NoteSpeed.Text = string.format('NoteSpeed: %.1f', noteSpeed);
+		screenGui.DebugHUD.ScrollSpeed.Text = string.format('ScrollSpeed: %.3fx', scrollSpeed);
+		screenGui.DebugHUD.BPM.Text = string.format('BPM: %.3fBPM', bpm);
+		screenGui.DebugHUD.BPM.Text = string.format('BPM: %.3fBPM', bpm);
+		screenGui.DebugHUD.PixelsPerSecond.Text = string.format('Pixels/s: %dpx/s', calculateActualNoteSpeed(noteSpeed, bpm, scrollSpeed));
+		screenGui.DebugHUD.Time.Text = string.format('Time: %02d:%02d.%03d/%02d:%02d.%03d', minutes, seconds, milliseconds, endTime.idiv(60_000), (endTime / 1_000) % 60, endTime % 1000);
+		screenGui.DebugHUD.RenderedNotes.Text = string.format('RenderedNotes: %d', createdNotes.size());
+		screenGui.DebugHUD.PressedNotes.Text = `PressedNotes: ${pressedNotes.join(',')}`;
+		screenGui.DebugHUD.HitPosition.Text = string.format('HitPosition: %s', hitPositions.join(','));
+		screenGui.DebugHUD.AverageError.Text = string.format('AvgHitErr: %dms,%dms', averageError[0], averageError[1]);
+		screenGui.DebugHUD.Autoplay.Text = `Autoplay: ${useAutoplay || devAutoPlay}`;
+		screenGui.DebugHUD.NoteSkin.Text = `NoteSkin: ${selectedNoteSkin}`;
+		screenGui.DebugHUD.FPS.Text = string.format('FPS: %.2f', 1 / dt);
+	}
+	
+	camera.CameraType = Enum.CameraType.Scriptable;
+	camera.CFrame = stageModel.Camera.CFrame;
+}
+
 export function finish() {
-	return new Promise<[number, number, number, number, number, number, number, number, number, number, number]>((resolve) => {
+	return new Promise<Types.RoundStats>((resolve) => {
 		$print('Finishing gameplay...');
 		
-		try {
-			RunService.UnbindFromRenderStep('GameplayUpdate');
-		} catch (err) {  }
+		isPlaying = false;
 		
-		const roundStats: [number, number, number, number, number, number, number, number, number, number, number] = [
+		startResolve = undefined;
+		music = undefined;
+		
+		const roundStats: Types.RoundStats = [
 			maxScore,
 			notesMax,
 			notes300,
@@ -929,12 +970,14 @@ export function finish() {
 			averageError[0],
 			averageError[1],
 		];
-			
-		TweenService.Create(camera, new TweenInfo(2, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
-			CFrame: originalCameraCFrame,
-		}).Play();
 		
-		task.delay(2, () => camera.CameraType = Enum.CameraType.Custom);
+		task.delay(1, () => {
+			TweenService.Create(camera, new TweenInfo(2, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
+				CFrame: originalCameraCFrame,
+			}).Play();
+			
+			task.delay(2, () => camera.CameraType = Enum.CameraType.Custom);
+		});
 		
 		for (const hotkey of laneHotkeys) hotkey.destroy();
 		laneHotkeys.clear();
@@ -953,8 +996,6 @@ export function finish() {
 		laneFrames.clear();
 		
 		$print('Cleared lanes');
-		
-		isPlaying = false;
 		
 		TweenService.Create(screenGui.ComboCounter, info, {
 			GroupTransparency: 1

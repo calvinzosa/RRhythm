@@ -5,7 +5,7 @@ import {
 	Workspace,
 } from '@rbxts/services';
 
-import { $dbg, $print } from 'rbxts-transform-debug';
+import { $dbg, $print, $warn } from 'rbxts-transform-debug';
 
 import * as MainGameplay from './MainGameplay';
 import * as Types from 'shared/Types';
@@ -55,12 +55,15 @@ export function init() {
 	const laneFrames: Types.UILane[] = [];
 	const laneTemplates: { Note: Types.UINote, HoldNote: Types.UIBodyNote, TailNote: Types.UITailNote, BodyNote: Types.UIBodyNote, Lane: Types.UILane }[] = [];
 	
-	const noteTravelTime = 1500;
-	const laneWidth = 70;
-	const hitPosition = 400;
+	const fastScrollHotkey = new UserInput.Hotkey('FastScroll', Enum.KeyCode.LeftControl);
+	
+	const noteTravelTime = 1300;
 	const lanePadding = 0;
 	const playedNotes = new Set<number>();
 	const visibleNotes = new Map<number, Types.NoteObject>();
+	
+	let laneWidth = 70;
+	let hitPosition = 400;
 	
 	let currentMillisecond = 0;
 	let beatSnapDivisor = 4;
@@ -105,6 +108,12 @@ export function init() {
 				(chart[category]![property] as string) = input.Value.Text;
 			}
 			refreshPreview();
+		});
+	}
+	
+	function textInputCallback(input: Types.UIEditorTextInput, callback: (text: string) => string) {
+		input.Value.FocusLost.Connect(() => {
+			input.Value.Text = callback(input.Value.ContentText);
 		});
 	}
 	
@@ -229,6 +238,8 @@ export function init() {
 		editorUI.Content.Metadata.Source.Value.Text = chart.metadata.source;
 		editorUI.Content.Metadata.Artist.Value.Text = chart.metadata.artist;
 		
+		isPlaying = false;
+		
 		for (const item of editorUI.Content.Metadata.Mappers.List.GetChildren()) {
 			if (item.IsA('TextButton')) item.Destroy();
 		}
@@ -273,6 +284,8 @@ export function init() {
 		const songFolder = setFolder?.FindFirstChild(chart.metadata.title);
 		const audio = songFolder?.FindFirstChild(chart.metadata.audioName);
 		
+		if (music !== undefined) music.Stop();
+		
 		if (audio?.IsA('Sound')) music = audio;
 		else music = undefined;
 		
@@ -298,15 +311,89 @@ export function init() {
 		updateNotes();
 	}
 	
-	function calculateYOffset(noteMillisecond: number, laneHeight: number) {
-		return ((currentMillisecond + noteTravelTime - noteMillisecond) / noteTravelTime) * (laneHeight * (hitPosition / 480) - laneWidth);
+	function calculateYOffset(noteMillisecond: number, laneHeight: number, fromStart=false) {
+		if (fromStart) return ((noteMillisecond) / noteTravelTime) * (laneHeight * (hitPosition / 480) - laneWidth);
+		
+		let result = ((currentMillisecond + noteTravelTime - noteMillisecond) / noteTravelTime) * (laneHeight * (hitPosition / 480) - laneWidth);
+		return result;
 	}
 	
 	function updateNotes() {
+		let currentBpm = 60;
+		let timingMillisecond = 0;
+		
+		for (const timing of chart.timings) {
+			if (timing.millisecond > currentMillisecond) break;
+			else if (timing.bpm !== undefined) {
+				currentBpm = timing.bpm;
+				timingMillisecond = timing.millisecond;
+			}
+		}
+		
+		const millisecondStep = 60_000 / currentBpm / beatSnapDivisor;
+		
+		for (const lane of laneFrames) {
+			for (const line of lane.Notes.GetChildren()) {
+				if (line.Name === 'Line') line.Destroy();
+			}
+			
+			const laneHeight = lane.AbsoluteSize.Y;
+			
+			let lineMillisecond = timingMillisecond - (millisecondStep * beatSnapDivisor);
+			let lineYOffset = calculateYOffset(lineMillisecond, laneHeight) + 1;
+			let colorAlternate = 0;
+			let whiteAlternate = 0;
+			
+			while (lineYOffset >= 0) {
+				colorAlternate++;
+				if (colorAlternate >= beatSnapDivisor) {
+					colorAlternate = 0;
+					
+					whiteAlternate++;
+					if (whiteAlternate >= 4) whiteAlternate = 0;
+				}
+				
+				if (lineYOffset < laneHeight) {
+					const line = new Instance('Frame');
+					line.Name = 'Line';
+					line.Position = new UDim2(0, 0, 0, lineYOffset);
+					line.Size = new UDim2(1, 0, 0, 2);
+					line.AnchorPoint = new Vector2(0, 0);
+					line.BorderSizePixel = 0;
+					line.BackgroundTransparency = 0.25;
+					line.ZIndex = -1;
+					
+					// i wonder what the correct way to color the lines is
+					if (colorAlternate === 0) {
+						line.BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+						if (whiteAlternate === 0) {
+							line.Position = new UDim2(0, 0, 0, lineYOffset - 2);
+							line.Size = new UDim2(1, 0, 0, 7);
+							line.BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+						}
+					} else if ((colorAlternate / 2) % 1 > 0) line.BackgroundColor3 = Color3.fromRGB(200, 0, 0);
+					else if ((colorAlternate / 3) % 1 > 0) line.BackgroundColor3 = Color3.fromRGB(0, 0, 200);
+					else if ((colorAlternate / 4) % 1 > 0) line.BackgroundColor3 = Color3.fromRGB(81, 49, 82);
+					else if ((colorAlternate / 5) % 1 > 0) line.BackgroundColor3 = Color3.fromRGB(200, 200, 0);
+					else if ((colorAlternate / 6) % 1 > 0) line.BackgroundColor3 = Color3.fromRGB(81, 49, 82);
+					else if ((colorAlternate / 7) % 1 > 0) line.BackgroundColor3 = Color3.fromRGB(200, 200, 0);
+					else if ((colorAlternate / 8) % 1 > 0) line.BackgroundColor3 = Color3.fromRGB(200, 200, 0);
+					else if ((colorAlternate / 9) % 1 > 0) line.BackgroundColor3 = Color3.fromRGB(200, 200, 0);
+					else if ((colorAlternate / 12) % 1 > 0) line.BackgroundColor3 = Color3.fromRGB(130, 130, 130);
+					else if ((colorAlternate / 16) % 1 > 0) line.BackgroundColor3 = Color3.fromRGB(130, 130, 130);
+					else line.BackgroundColor3 = Color3.fromRGB(255, 255, 0);
+					
+					line.Parent = lane.Notes;
+				}
+				
+				lineMillisecond += millisecondStep;
+				lineYOffset = calculateYOffset(math.round(lineMillisecond), laneHeight);
+			}
+		}
+		
 		for (const [i, noteData] of ipairs(chart.notes)) {
 			const laneContainer = laneFrames[noteData.lane % chart.metadata.totalLanes];
 			const laneHeight = laneContainer.AbsoluteSize.Y;
-			const laneWidth = laneContainer.AbsoluteSize.X;
 			
 			const template = laneTemplates[noteData.lane % chart.metadata.totalLanes];
 			const yOffset = calculateYOffset(noteData.millisecond, laneHeight);
@@ -427,10 +514,53 @@ export function init() {
 		selectedSongTarget = allCharts.get(song);
 	});
 	
+	textInputCallback(editorUI.Content.View.BeatSnapDivisor, (text) => {
+		const number = math.round(math.clamp(tonumber(text) ?? tonumber(text.gsub('[^%d]', '')[0]) ?? beatSnapDivisor, 1, 16));
+		beatSnapDivisor = number;
+		
+		return tostring(number);
+	});
+	
+	textInputCallback(editorUI.Content.View.LaneWidth, (text) => {
+		const number = math.round(math.clamp(tonumber(text) ?? tonumber(text.gsub('[^%d]', '')[0]) ?? laneWidth, 1, camera.ViewportSize.X));
+		laneWidth = number;
+		
+		refreshPreview();
+		
+		return tostring(number);
+	});
+	
+	textInputCallback(editorUI.Content.View.HitPosition, (text) => {
+		const number = math.round(math.clamp(tonumber(text) ?? tonumber(text.gsub('[^%d]', '')[0]) ?? hitPosition, 0, 480));
+		hitPosition = number;
+		
+		refreshPreview();
+		
+		return tostring(number);
+	});
+	
 	editorUI.Lanes.InputChanged.Connect((input) => {
 		if (input.UserInputType === Enum.UserInputType.MouseWheel) {
-			const delta = math.sign(input.Position.Z);
-			currentMillisecond += delta * 500;
+			const direction = math.sign(input.Position.Z);
+			
+			let currentBpm = 60;
+			
+			for (const timing of chart.timings) {
+				if (timing.millisecond > currentMillisecond) break;
+				else if (timing.bpm !== undefined) currentBpm = timing.bpm;
+			}
+			
+			const millisecondStep = 60_000 / currentBpm / beatSnapDivisor;
+			currentMillisecond = currentMillisecond + direction * millisecondStep * (fastScrollHotkey.isPressed ? 4 : 1);
+			
+			let newBpm = 60;
+			for (const timing of chart.timings) {
+				if (timing.millisecond > currentMillisecond) break;
+				else if (timing.bpm !== undefined) newBpm = timing.bpm;
+			}
+			
+			const newMillisecondStep = 60_000 / currentBpm / beatSnapDivisor;
+			currentMillisecond = currentMillisecond.idiv(newMillisecondStep) * newMillisecondStep;
 			
 			playedNotes.clear();
 		}
@@ -440,7 +570,7 @@ export function init() {
 		if (!selectedSongTarget) return;
 		
 		try {
-			chart = MainGameplay.loadSongModule(selectedSongTarget);
+			chart = table.clone(MainGameplay.loadSongModule(selectedSongTarget));
 			
 			editorUI.Content.Load.Load.Text = 'Loaded!';
 			task.delay(0.2, () => editorUI.Content.Load.Load.Text = 'Load chart!');

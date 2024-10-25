@@ -2,6 +2,7 @@ import {
 	Players,
 	ReplicatedStorage,
 	RunService,
+	StarterGui,
 	Workspace,
 } from '@rbxts/services';
 
@@ -14,6 +15,7 @@ import * as MainGameplay from './MainGameplay';
 import * as Editor from './Editor';
 import * as UserInput from './UserInput';
 import * as Preloader from './Preloader';
+import * as Topbar from './Topbar';
 
 const player = Players.LocalPlayer;
 const eventsFolder = ReplicatedStorage.WaitForChild('Events') as Types.EventsFolder;
@@ -62,6 +64,30 @@ stagesFolder.DescendantAdded.Connect((stage) => {
 	if (stage.IsA('Model')) newStage(stage as Types.StageModel);
 });
 
+RunService.BindToRenderStep('MainUpdate', Enum.RenderPriority.Last.Value, (dt) => {
+	if (MainGameplay.isPlaying) MainGameplay.gameUpdate(dt);
+});
+
+Topbar.Settings.toggled.Connect((isSelected) => {
+	if (isSelected) {
+		Topbar.GameMenu.lock();
+	} else {
+		if (!Topbar.Profile.isSelected) Topbar.GameMenu.unlock();
+	}
+});
+
+Topbar.ShopEnter.selected.Connect(() => {
+	
+});
+
+Topbar.Profile.toggled.Connect((isSelected) => {
+	if (isSelected) {
+		Topbar.GameMenu.lock();
+	} else {
+		if (!Topbar.Settings.isSelected) Topbar.GameMenu.unlock();
+	}
+});
+
 (eventsFolder.WaitForChild('StartSongSelection') as RemoteEvent).OnClientEvent.Connect(async () => {
 	while (true) {
 		const selectedSong = await MainGameplay.startSongSelection();
@@ -99,6 +125,18 @@ stagesFolder.DescendantAdded.Connect((stage) => {
 (eventsFolder.WaitForChild('StartStagePreview') as RemoteEvent).OnClientEvent.Connect((preview: Types.StagePreview) => {
 	preview.SetAttribute(Constants.Attributes.StagePreview.IsOngoing, true);
 });
+
+while (true) {
+	try {
+		StarterGui.SetCoreGuiEnabled(Enum.CoreGuiType.Captures, false);
+		StarterGui.SetCoreGuiEnabled(Enum.CoreGuiType.Health, false);
+		StarterGui.SetCoreGuiEnabled(Enum.CoreGuiType.EmotesMenu, false);
+		
+		break;
+	} catch (err) {
+		task.wait(1);
+	}
+}
 
 // task.wait(2);
 

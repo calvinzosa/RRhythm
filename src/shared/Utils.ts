@@ -1,14 +1,4 @@
 /**
- * Recursively calls `table.freeze` on a table and its' sub-tables
- * @param tableObject The table to deep freeze recursively
- * @returns `void`
- */
-export function deepFreeze(tableObject: any): void {
-	table.freeze(tableObject);
-	for (const [, value] of tableObject as Map<any, any>) if (typeIs(value, 'table')) deepFreeze(value);
-}
-
-/**
  * Adds commas to numbers every 3 digits
  * @param number The number to format
  * @returns Formatted number
