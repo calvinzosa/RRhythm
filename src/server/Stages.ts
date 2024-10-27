@@ -175,7 +175,8 @@ export function updateStage(stage: Types.StageModel) {
 		let length = 0;
 		
 		for (const note of chart.notes) {
-			if (note.millisecond > length) length = note.millisecond;
+			const noteEndTime = note.type === 1 ? (note.millisecond + note.holdLength) : note.millisecond;
+			if (noteEndTime > length) length = noteEndTime;
 		}
 		
 		length += 9000;
@@ -202,18 +203,19 @@ export function updateStage(stage: Types.StageModel) {
 		const character = player.Character;
 		const rootPart = character?.FindFirstChild('HumanoidRootPart') as Part | undefined;
 		const rootAttachment = rootPart?.FindFirstChild('RootAttachment') as Attachment | undefined;
+		const playerNumber = character?.GetAttribute(Constants.Attributes.Character.StagePlayerNumber) as number | undefined ?? 1;
+		
 		if (character && rootPart && rootAttachment && character.GetAttribute(Constants.Attributes.Character.IsAttachedStage) === true) {
 			attachPlayer(
 				player,
 				character,
 				rootPart,
 				rootAttachment,
-				character.GetAttribute(Constants.Attributes.Character.StagePlayerNumber) as (number | undefined) ?? 1,
+				playerNumber,
 				stage
 			);
 		}
 		
-		const playerNumber = character?.GetAttribute(Constants.Attributes.Character.StagePlayerNumber) as number | undefined ?? 1;
 		const preview = stage.FindFirstChild(`Preview${playerNumber}`) as Types.StagePreview | undefined;
 		if (preview !== undefined) {
 			eventsFolder.EndStagePreview.FireAllClients(preview);

@@ -8,11 +8,13 @@ import {
 
 import { $dbg, $print, $warn } from 'rbxts-transform-debug';
 
-import * as UserInput from 'client/UserInput';
 import * as Types from 'shared/Types';
 import * as Utils from 'shared/Utils';
 import { Constants } from 'shared/Constants';
 import LZWCompression from 'shared/LZWCompression';
+
+import * as UserInput from './UserInput';
+import * as Topbar from './Topbar';
 
 export let isPlaying = false;
 
@@ -51,7 +53,7 @@ let bindedKeys = [Enum.KeyCode.Q, Enum.KeyCode.W, Enum.KeyCode.LeftBracket, Enum
 let laneWidth = 75;
 let lanePadding = 1;
 let noteSpeed = 10;
-let selectedNoteSkin = 'Editor';
+let selectedNoteSkin = 'CirclesV1';
 let maxVisibleNotes = 200;
 
 let accuracyFormat = '<stroke thickness="2" color="#000" joins="miter"><b>%s</b></stroke>';
@@ -103,32 +105,44 @@ export function calculateAccuracy(nMax: number, n300: number, n200: number, n100
 export function calculateDifficulty(chart: Types.Chart) {
 	let length = 0;
 	for (const note of chart.notes) {
-		if (note.millisecond > length) length = note.millisecond;
+		const noteEndTime = note.type === 1 ? (note.millisecond + note.holdLength) : note.millisecond;
+		if (noteEndTime > length) length = noteEndTime;
 	}
 	
-	let averageNoteDensity = -1;
-	let highestNoteDensity = -math.huge;
+	const timeStep = 7500;
+	let highestNoteDensity = 0;
 	
-	for (const i of $range(0, length, 5000)) {
+	for (const millisecond of $range(0, length, timeStep)) {
 		let noteDensity = 0;
 		for (const note of chart.notes) {
-			if (note.millisecond >= i && note.millisecond <= i + 5000) noteDensity++;
-			else if (note.millisecond > i + 5000) break;
+			if (note.millisecond >= millisecond && note.millisecond <= millisecond + timeStep) noteDensity++;
+			else if (note.millisecond > millisecond + timeStep) break;
 		}
 		
 		if (noteDensity > highestNoteDensity) highestNoteDensity = noteDensity;
-		
-		if (averageNoteDensity >= 0) averageNoteDensity = (averageNoteDensity + noteDensity) / 2;
-		else averageNoteDensity = noteDensity;
 	}
 	
-	const difficultyNumber = 3 * (
+	highestNoteDensity /= math.min(timeStep, length);
+	highestNoteDensity *= 1000;
+	
+	const averageNoteDensity = chart.notes.size() / (length / 1000);
+	highestNoteDensity = math.max(highestNoteDensity, averageNoteDensity);
+	
+	const difficultyNumber = (5 / 2) * (
 		(
-			(10 / chart.difficulty.maxHealth) ** (1 / 2) *
-			chart.difficulty.overallDifficulty ** (2 / 3) *
-			(1 + highestCombo / 10) ** (1 / 3)
-		) ** (1 + averageNoteDensity / (10 * highestNoteDensity))
+			((10 / chart.difficulty.maxHealth) ** (2 / 5)) *
+			((chart.difficulty.overallDifficulty / 4) ** (8 / 5)) *
+			((1 + (highestNoteDensity / 6)) ** (2 / 5))
+		) ** (((8 * averageNoteDensity) / highestNoteDensity) ** (1 / 8))
 	);
+	
+	// const difficultyNumber = 3 * (
+	// 	(
+	// 		(10 / chart.difficulty.maxHealth) ** (1 / 2) *
+	// 		(chart.difficulty.overallDifficulty / 4) ** (2 / 3) *
+	// 		(1 + highestNoteDensity / 8) ** (1 / 3)
+	// 	) ** (1 + averageNoteDensity / (35 * highestNoteDensity))
+	// );
 	
 	let difficultyWord: string;
 	
@@ -136,19 +150,19 @@ export function calculateDifficulty(chart: Types.Chart) {
 	
 	const hue = ((120 - 300 * math.sqrt(math.min(1, clampedDifficulty / 50))) / 360) % 1;
 	const saturation = 0.4;
-	const value = 0.9 - 0.9 * math.clamp((difficultyNumber - 50) / 100, 0, 1) ** 1.2;
+	const value = 0.9 - 0.9 * math.clamp((clampedDifficulty - 50) / 100, 0, 1) ** 1.2;
 	
 	const difficultyColor = Color3.fromHSV(hue, saturation, value);
 	
-	if (difficultyNumber > 100) {
+	if (difficultyNumber >= 100) {
 		difficultyWord = 'Impossible';
-	} else if (difficultyNumber > 80) {
+	} else if (difficultyNumber >= 80) {
 		difficultyWord = 'Extreme+';
-	} else if (difficultyNumber > 60) {
+	} else if (difficultyNumber >= 60) {
 		difficultyWord = 'Extreme';
-	} else if (difficultyNumber > 40) {
+	} else if (difficultyNumber >= 40) {
 		difficultyWord = 'Crazy+';
-	} else if (difficultyNumber > 20) {
+	} else if (difficultyNumber >= 20) {
 		difficultyWord = 'Crazy';
 	} else if (difficultyNumber >= 15) {
 		difficultyWord = 'Expert+';
@@ -165,6 +179,16 @@ export function calculateDifficulty(chart: Types.Chart) {
 	}
 	
 	return $tuple(difficultyNumber, difficultyWord, difficultyColor);
+}
+
+export function calculateTokensReward(difficultyNumber: number, accuracy: number, songDuration: number) {
+	let tokens = 300 * (math.clamp(difficultyNumber, 0, 50) / 10)
+						* ((math.clamp(accuracy, 0, 100) / 100) ** 1.5)
+						* ((math.max(songDuration, 10_000) / 90_000) ** 0.5);
+	
+	if (tokens > 3_000) tokens = 3_000 + math.sqrt(tokens - 3_000);
+	
+	return math.max(tokens, 50);
 }
 
 export function calculateActualNoteSpeed(noteSpeed: number, bpm: number, scrollSpeed: number): number {
@@ -535,7 +559,6 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 			
 			const hotkey = new UserInput.Hotkey(`Lane${i}`, bindedKeys[i - 1]);
 			
-			if (autoplay || devAutoPlay) hotkey.canPress = false;
 			hotkey.onPress(() => laneOnPress(lane, startTime, i, createdNotes));
 			hotkey.onRelease(() => laneOnRelease(lane, i, startTime, createdNotes));
 			
@@ -554,10 +577,13 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 		heldTimings.sort((a, b) => a.millisecond < b.millisecond);
 		
 		for (const [i, note] of ipairs(chart.notes)) {
-			if (note.lane < 0 || note.lane >= totalLanes) {
+			if (note.lane < 0 || note.lane > totalLanes - 1) {
 				$warn(`> Note #${i} is not in a valid lane (${note.lane}), the mininum is 0 and the maximum is ${totalLanes - 1}`);
 				continue;
 			}
+			
+			const noteEndTime = note.type === 1 ? (note.millisecond + note.holdLength) : note.millisecond;
+			if (noteEndTime > endTime) endTime = noteEndTime;
 			
 			if (note.type === 0) {
 				heldNotes.push({
@@ -573,8 +599,6 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 					holdLength: note.holdLength
 				});
 			}
-			
-			if (note.millisecond > endTime) endTime = note.millisecond;
 		}
 		
 		heldNotes.sort((a, b) => a.millisecond < b.millisecond);
@@ -616,6 +640,9 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 export function gameUpdate(dt: number) {
 	if (music === undefined || stageModel === undefined) return;
 	
+	if (!Topbar.GameMenu.locked) Topbar.GameMenu.lock();
+	if (Topbar.GameMenu.isSelected) Topbar.GameMenu.deselect();
+	
 	for (const hotkey of laneHotkeys) {
 		if (useAutoplay || devAutoPlay) hotkey.canPress = false;
 	}
@@ -646,18 +673,30 @@ export function gameUpdate(dt: number) {
 	}
 	
 	if (elapsedTime >= 0) {
-		if (heldNotes.size() === 0) {
-			if (createdNotes.size() === 0 || !music.IsPlaying) {
-				isPlaying = false;
+		if (elapsedTime >= endTime + 500) {
+			isPlaying = false;
+			
+			if (music.IsPlaying) {
+				const previousMusic = music;
+				const originalVolume = previousMusic.Volume;
 				
-				task.delay(4, async () => {
-					const results = await finish();
-					if (startResolve !== undefined) startResolve(results);
-					startResolve = undefined;
+				TweenService.Create(previousMusic, new TweenInfo(5, Enum.EasingStyle.Linear), {
+					Volume: 0,
+				}).Play();
+				
+				task.delay(5, () => {
+					previousMusic.Volume = originalVolume;
+					previousMusic.Stop();
 				});
-				
-				return;
 			}
+			
+			task.delay(4, async () => {
+				const results = await finish();
+				if (startResolve !== undefined) startResolve(results);
+				startResolve = undefined;
+			});
+			
+			return;
 		} else if (!music.IsPlaying) music.Play();
 	}
 	
@@ -953,8 +992,8 @@ export function finish() {
 		$print('Finishing gameplay...');
 		
 		isPlaying = false;
+		Topbar.GameMenu.unlock();
 		
-		startResolve = undefined;
 		music = undefined;
 		
 		const roundStats: Types.RoundStats = [
@@ -1066,6 +1105,8 @@ export function showGrade(chart: Types.Chart, totalScore: number, notesMax: numb
 	screenGui.StatsContainer.Content.HighestCombo.Text = `Highest Combo: ${Utils.formatNumber(highestCombo)}x / ${Utils.formatNumber(maxCombo)}x`;
 	screenGui.StatsContainer.Content.TotalScore.Text = `Total Score: ${Utils.formatNumber(totalScore)} / ${Utils.formatNumber(maxScore)}`;
 	
+	screenGui.StatsContainer.Content.Accuracy.SetAttribute('Tooltip', `Full Accuracy: ${accuracy}%`);
+	
 	screenGui.StatsContainer.Position = new UDim2(-0.99, 0, 0.5, 0);
 	screenGui.StatsContainer.Visible = true;
 	
@@ -1119,6 +1160,9 @@ export function startSongSelection() {
 		
 		const connections: RBXScriptConnection[] = [];
 		
+		if (!Topbar.GameMenu.locked) Topbar.GameMenu.lock();
+		if (Topbar.GameMenu.isSelected) Topbar.GameMenu.deselect();
+		
 		connections.push(screenGui.SongSelector.Topbar.Close.MouseButton1Click.Once(() => {
 			for (const connection of connections) connection.Disconnect();
 			
@@ -1144,73 +1188,135 @@ export function startSongSelection() {
 				if (item.IsA('TextButton')) item.Destroy();
 			}
 			
-			for (const item of list.GetChildren()) {
-				if (!item.IsA(itemType)) continue;
-				
-				const button = template.Clone();
-				button.Text = item.Name;
-				if (orderByAttribute) button.Name = tostring(item.GetAttribute('Order') ?? 0);
-				else button.Name = item.Name;
-				button.Parent = container;
-				
-				button.MouseButton1Click.Connect(() => callback(item as any as T));
+			const defaultColor = Color3.fromRGB(255, 255, 255);
+			
+			if (list.GetAttribute('Category_ShowAll')) {
+				for (const category of songsFolder.GetChildren()) {
+					for (const item of category.GetChildren()) {
+						if (!item.IsA(itemType)) continue;
+						
+						const button = template.Clone();
+						button.Text = tostring(item.GetAttribute('Display') ?? item.Name);
+						if (orderByAttribute) button.Name = `Item${item.GetAttribute('Order') ?? 0}`;
+						else button.Name = item.Name;
+						
+						button.BackgroundColor3 = (category.GetAttribute('DefaultColor') as Color3 | undefined)
+							?? (item.GetAttribute('ItemColor') as Color3 | undefined)
+							?? defaultColor;
+						
+						button.Parent = container;
+						
+						button.MouseButton1Click.Connect(() => callback(item as any as T));
+					}
+				}
+			} else {
+				for (const item of list.GetChildren()) {
+					if (!item.IsA(itemType)) continue;
+					
+					const button = template.Clone();
+					button.Text = tostring(item.GetAttribute('Display') ?? item.Name);
+					if (orderByAttribute) button.Name = `Item${item.GetAttribute('Order') ?? 0}`;
+					else button.Name = item.Name;
+					
+					button.BackgroundColor3 = (list.GetAttribute('DefaultColor') as Color3 | undefined)
+						?? (item.GetAttribute('ItemColor') as Color3 | undefined)
+						?? defaultColor;
+					
+					button.Parent = container;
+					
+					button.MouseButton1Click.Connect(() => callback(item as any as T));
+				}
 			}
 		}
 		
-		const infoFrame = screenGui.SongSelector.Content.Info;
-		infoFrame.SongTitle.Text = '--';
-		infoFrame.Composer.Text = '<i>Select a song</i>';
-		infoFrame.Mappers.Text = '';
-		infoFrame.StarDifficulty.Text = '';
-		infoFrame.MaxHealth.Text = '';
-		infoFrame.OverallDifficulty.Text = '';
-		infoFrame.Duration.Text = '';
-		infoFrame.KeyCount.Text = '';
-		screenGui.SongSelector.Bottom.Select.AutoButtonColor = false;
-		screenGui.SongSelector.Bottom.Select.BackgroundColor3 = Color3.fromRGB(102, 179, 117);
-		
-		doSelection<TextButton>(screenGui.SongSelector.Content.Categories, songsFolder, 'Folder', categoryButtonTemplate, false, (category) => {
-			doSelection<TextButton>(screenGui.SongSelector.Content.Songs, category, 'Folder', songButtonTemplate, false, (song) => {
-				selectedDifficulty = undefined;
+		function updateInfoFrame(data: Types.InfoUpdateData) {
+			const { isSelected, songTitle, chart } = data;
+			
+			const infoFrame = screenGui.SongSelector.Content.Info;
+			infoFrame.SongTitle.Text = songTitle ?? '--';
+			
+			if (isSelected) {
+				let maxCombo = 0;
+				let length = 0;
 				
-				infoFrame.SongTitle.Text = `<b>${song.Name}</b>`;
-				infoFrame.Composer.Text = '<i>Select a difficulty</i>';
+				for (const note of chart.notes) {
+					const noteEndTime = note.type === 1 ? (note.millisecond + note.holdLength) : note.millisecond;
+					if (noteEndTime > length) length = noteEndTime;
+					
+					maxCombo += note.type === 1 ? 2 : 1;
+				}
+				
+				const minutes = length.idiv(60_000);
+				const seconds = (length / 1_000) % 60;
+				
+				const [difficultyNumber, difficultyWord, difficultyColor] = calculateDifficulty(chart);
+				const hexColor = difficultyColor.ToHex();
+				
+				infoFrame.Composer.Text = `Composer: <b>${chart.metadata.artist}</b>`;
+				infoFrame.Mappers.Text = `Mappers: <b>${chart.metadata.mappers.join(', ')}</b>`;
+				infoFrame.StarDifficulty.Text = `DIF: <b><font color="#${hexColor}">${difficultyWord}</font> (@${string.format('%.1f', difficultyNumber)})</b>`;
+				infoFrame.MaxHealth.Text = `HP: <b>${chart.difficulty.maxHealth}</b>`;
+				infoFrame.OverallDifficulty.Text = `OD: <b>${chart.difficulty.overallDifficulty}</b>`;
+				infoFrame.Duration.Text = `DUR: <b>${string.format('%d:%02d', minutes, seconds)}</b>`;
+				infoFrame.MaxCombo.Text = `MC: <b>${Utils.formatNumber(maxCombo)}x</b>`;
+				infoFrame.KeyCount.Text = `KEYS: <b>${chart.metadata.totalLanes}K</b>`;
+				
+				infoFrame.StarDifficulty.SetAttribute('Tooltip', `Difficulty (@${difficultyNumber})`);
+				infoFrame.MaxHealth.SetAttribute('Tooltip', 'Max Health Points');
+				infoFrame.OverallDifficulty.SetAttribute('Tooltip', 'Overall Difficulty');
+				infoFrame.Duration.SetAttribute('Tooltip', `Duration/Length (${length / 1_000} seconds)`);
+				infoFrame.MaxCombo.SetAttribute('Tooltip', 'Maximum Combo');
+				infoFrame.KeyCount.SetAttribute('Tooltip', '# of Keys/Lanes');
+				
+				screenGui.SongSelector.Bottom.Select.AutoButtonColor = true;
+				screenGui.SongSelector.Bottom.Select.BackgroundColor3 = Color3.fromRGB(57, 230, 92);
+			} else {
+				infoFrame.Composer.Text = songTitle ? '<i>Select a difficulty</i>' : '<i>Select a song</i>';
 				infoFrame.Mappers.Text = '';
 				infoFrame.StarDifficulty.Text = '';
 				infoFrame.MaxHealth.Text = '';
 				infoFrame.OverallDifficulty.Text = '';
 				infoFrame.Duration.Text = '';
+				infoFrame.MaxCombo.Text = '';
 				infoFrame.KeyCount.Text = '';
+				
+				infoFrame.StarDifficulty.SetAttribute('Tooltip', undefined);
+				infoFrame.MaxHealth.SetAttribute('Tooltip', undefined);
+				infoFrame.OverallDifficulty.SetAttribute('Tooltip', undefined);
+				infoFrame.Duration.SetAttribute('Tooltip', undefined);
+				infoFrame.MaxCombo.SetAttribute('Tooltip', undefined);
+				infoFrame.KeyCount.SetAttribute('Tooltip', undefined);
+				
 				screenGui.SongSelector.Bottom.Select.AutoButtonColor = false;
 				screenGui.SongSelector.Bottom.Select.BackgroundColor3 = Color3.fromRGB(102, 179, 117);
+			}
+		}
+		
+		updateInfoFrame({
+			isSelected: false,
+			chart: undefined,
+		});
+		
+		doSelection<TextButton>(screenGui.SongSelector.Content.Categories, songsFolder, 'Folder', categoryButtonTemplate, false, (category) => {
+			doSelection<TextButton>(screenGui.SongSelector.Content.Songs, category, 'Folder', songButtonTemplate, false, (song) => {
+				selectedDifficulty = undefined;
+				
+				updateInfoFrame({
+					isSelected: false,
+					songTitle: song.Name,
+					chart: undefined,
+				});
 				
 				doSelection<ModuleScript>(screenGui.SongSelector.Content.Info.Difficulties, song, 'ModuleScript', difficultyButtonTemplate, false, (difficulty) => {
 					selectedDifficulty = difficulty;
 					
 					const chart = loadSongModule(difficulty);
 					
-					let length = 0;
-					
-					for (const note of chart.notes) {
-						if (note.millisecond > length) length = note.millisecond;
-					}
-					
-					const minutes = length.idiv(60_000);
-					const seconds = (length / 1_000) % 60;
-					
-					const [difficultyNumber, difficultyWord, difficultyColor] = calculateDifficulty(chart);
-					const hexColor = difficultyColor.ToHex();
-					
-					infoFrame.Composer.Text = `Composer: <b>${chart.metadata.artist}</b>`;
-					infoFrame.Mappers.Text = `Mappers: <b>${chart.metadata.mappers.join(', ')}</b>`;
-					infoFrame.StarDifficulty.Text = `DIF: <b><font color="#${hexColor}">${difficultyWord}</font> (@${string.format('%.1f', difficultyNumber)})</b>`;
-					infoFrame.MaxHealth.Text = `HP: <b>${chart.difficulty.maxHealth}</b>`;
-					infoFrame.OverallDifficulty.Text = `OD: <b>${chart.difficulty.overallDifficulty}</b>`;
-					infoFrame.Duration.Text = `DUR: <b>${string.format('%d:%02d', minutes, seconds)}</b>`;
-					infoFrame.KeyCount.Text = `KEYS: <b>${chart.metadata.totalLanes}K</b>`;
-					
-					screenGui.SongSelector.Bottom.Select.AutoButtonColor = true;
-					screenGui.SongSelector.Bottom.Select.BackgroundColor3 = Color3.fromRGB(155, 255, 175);
+					updateInfoFrame({
+						isSelected: true,
+						songTitle: song.Name,
+						chart: chart,
+					});
 				});
 			});
 		});
@@ -1239,6 +1345,8 @@ export function endSongSelection(difficulty?: ModuleScript, resolve?: (difficult
 		Rotation: 180,
 	}).Play();
 	
+	if (Topbar.GameMenu.locked) Topbar.GameMenu.unlock();
+	
 	if (difficulty !== undefined && resolve !== undefined) resolve(difficulty as ModuleScript);
 }
 
@@ -1253,12 +1361,17 @@ export function updatePreview(preview: Types.StagePreview, songFolder: Folder, u
 	const maxScore = totalNotes * 300;
 	
 	const totalScore = math.clamp(tonumber(stringTotalScore) ?? 0, 0, maxScore);
-	const accuracy = math.clamp(tonumber(stringAccuracy) ?? tonumber('nan') as number, 0, 100);
+	const accuracy = string.format('%.3f', math.clamp((tonumber(stringAccuracy) ?? tonumber('nan') as number) / 100, 0, 100));
 	const notesMisses = math.clamp(tonumber(stringNotesMisses) ?? 0, 0, totalNotes);
 	const noteCombo = math.clamp(tonumber(stringNoteCombo) ?? 0, 0, totalNotes);
 	
 	let selectedSkinFolder = skinsFolder.FindFirstChild(noteSkin) as Types.SkinFolder | undefined;
 	if (!selectedSkinFolder) return;
+	
+	preview.SurfaceGui.InfoHUD.Score.Text = `<stroke thickness="1" color="#000" joins="miter">Score: <b>${Utils.formatNumber(totalScore)}</b></stroke>`;
+	preview.SurfaceGui.InfoHUD.Accuracy.Text = `<stroke thickness="1" color="#000" joins="miter">Accuracy: <b>${accuracy}%</b></stroke>`;
+	preview.SurfaceGui.InfoHUD.Combo.Text = `<stroke thickness="1" color="#000" joins="miter">Combo: <b>${Utils.formatNumber(noteCombo)}x</b></stroke>`;
+	preview.SurfaceGui.InfoHUD.Misses.Text = `<stroke thickness="1" color="#000" joins="miter">Misses: <b>${Utils.formatNumber(notesMisses)}</b></stroke>`;
 	
 	const laneTemplates: { Note: Types.UINote, HoldNote: Types.UIBodyNote, TailNote: Types.UITailNote, BodyNote: Types.UIBodyNote, Lane: Types.UILane }[] = [];
 		
@@ -1345,10 +1458,12 @@ export function updatePreview(preview: Types.StagePreview, songFolder: Folder, u
 			if (!tailNote) {
 				tailNote = template.TailNote.Clone();
 				tailNote.Name = tostring(id);
-				tailNote.Position = new UDim2(0, 0, yScale, 0);
+				tailNote.Position = new UDim2(0, 0, 0, 0);
 				tailNote.AnchorPoint = new Vector2(0, 1);
 				tailNote.Parent = laneContainer.Notes;
-			} else TweenService.Create(tailNote, info, {
+			}
+			
+			TweenService.Create(tailNote, info, {
 				Position: new UDim2(0, 0, yScale, 0),
 			}).Play();
 			
@@ -1357,25 +1472,27 @@ export function updatePreview(preview: Types.StagePreview, songFolder: Folder, u
 			const holdYScale = laneHolds.get(lane);
 			if (holdYScale) {
 				let topOffset = 0;
-				let bottomOffset = 0;
+				let bottomOffset = laneWidth.idiv(-2);
 				
 				if (typeIs(template.BodyNote.GetAttribute('OffsetTop'), 'number')) {
 					topOffset += laneWidth * (template.BodyNote.GetAttribute('OffsetTop') as number);
 				}
 				
 				if (typeIs(template.BodyNote.GetAttribute('OffsetBottom'), 'number')) {
-					bottomOffset += laneWidth * (template.BodyNote.GetAttribute('OffsetBottom') as number);
+					bottomOffset -= laneWidth * (template.BodyNote.GetAttribute('OffsetBottom') as number);
 				}
 				
 				let bodyNote = laneContainer.Notes.FindFirstChild(tostring(id + 0.5)) as Types.UIBodyNote | undefined;
 				if (!bodyNote) {
 					bodyNote = template.BodyNote.Clone();
 					bodyNote.Name = tostring(id + 0.5);
-					bodyNote.Position = new UDim2(0, 0, yScale, topOffset);
-					bodyNote.Size = new UDim2(1, 0, holdYScale - yScale, bottomOffset);
+					bodyNote.Position = new UDim2(0, 0, 0, 0);
+					bodyNote.Size = new UDim2(1, 0, 0, 0);
 					bodyNote.AnchorPoint = new Vector2(0, 0);
 					bodyNote.Parent = laneContainer.Notes;
-				} else TweenService.Create(bodyNote, info, {
+				}
+				
+				TweenService.Create(bodyNote, info, {
 					Position: new UDim2(0, 0, yScale, topOffset),
 					Size: new UDim2(1, 0, holdYScale - yScale, bottomOffset),
 				}).Play();
@@ -1388,10 +1505,12 @@ export function updatePreview(preview: Types.StagePreview, songFolder: Folder, u
 			if (!holdNote) {
 				holdNote = template.HoldNote.Clone();
 				holdNote.Name = tostring(id);
-				holdNote.Position = new UDim2(0, 0, yScale, 0);
+				holdNote.Position = new UDim2(0, 0, 0, 0);
 				holdNote.AnchorPoint = new Vector2(0, 1);
 				holdNote.Parent = laneContainer.Notes;
-			} else TweenService.Create(holdNote, info, {
+			}
+			
+			TweenService.Create(holdNote, info, {
 				Position: new UDim2(0, 0, yScale, 0),
 			}).Play();
 			

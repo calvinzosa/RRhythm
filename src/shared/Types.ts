@@ -24,6 +24,17 @@ check(game, 1)s..='};\n'print(s)
 export type Grade = 'X' | 'S' | 'A' | 'B' | 'C' | 'D';
 export type RoundStats = [ number, number, number, number, number, number, number, number, number, number, number ];
 
+export type InfoUpdateData =
+	{
+		isSelected: false,
+		songTitle?: string,
+		chart: undefined,
+	} | {
+		isSelected: true,
+		songTitle: string,
+		chart: Chart,
+	}
+
 // Replicated Storage
 
 export type EventsFolder = Folder & {
@@ -46,6 +57,38 @@ export type SkinFolder = Folder & {
 	Lane: UILane;
 };
 
+// ProfileService Data
+
+export type ProfileOwnedAnimation = ProfileBaseOwnedItem & {
+	Type: 0,
+	AnimationName: string,
+};
+
+export type ProfileOwnedEmote = ProfileBaseOwnedItem & {
+	Type: 1,
+	EmoteName: string,
+};
+
+export type ProfileOwnedSkin = ProfileBaseOwnedItem & {
+	Type: 2,
+	SkinName: string,
+};
+
+export type ProfileOwnedCaption = ProfileBaseOwnedItem & {
+	Type: 3,
+	CaptionName: string,
+};
+
+export type ProfileBaseOwnedItem = {
+	DatePurchased: string,
+};
+
+export type ProfileOwnedItem =
+	| ProfileOwnedAnimation
+	| ProfileOwnedEmote
+	| ProfileOwnedSkin
+	| ProfileOwnedCaption;
+
 // Models
 
 export type StagePlayer = Part & {
@@ -58,7 +101,8 @@ export type StagePlayer = Part & {
 export type StagePreview = Part & {
 	SurfaceGui: SurfaceGui & {
 		Background: Frame;
-		Lanes: Frame;
+		Lanes: CanvasGroup;
+		InfoHUD: UIInfoHUD;
 		AccuracyDisplay: UIAccuracyDisplay;
 		ComboCounter: UIComboCounter;
 	};
@@ -75,6 +119,25 @@ export type StageModel = Model & {
 };
 
 // User Interface
+
+export type UITooltip = Frame & {
+	Left: Frame & {
+		UIListLayout: UIListLayout;
+		Tail: ImageLabel;
+		Label: TextLabel & {
+			UISizeConstraint: UISizeConstraint;
+			UIPadding: UIPadding;
+		};
+	};
+	Right: Frame & {
+		UIListLayout: UIListLayout;
+		Tail: ImageLabel;
+		Label: TextLabel & {
+			UISizeConstraint: UISizeConstraint;
+			UIPadding: UIPadding;
+		};
+	};
+};
 
 export type UIGrade = Frame & {
 	Icon: ImageLabel;
@@ -106,17 +169,18 @@ export type UISongSelector = Frame & {
 			Composer: TextLabel;
 			UIPadding: UIPadding;
 			SongTitle: TextLabel;
-			Difficulties: ScrollingFrame & {
-				UIListLayout: UIListLayout;
-				UIPadding: UIPadding;
-			};
 			Mappers: TextLabel;
 			UIFlexItem: UIFlexItem;
 			StarDifficulty: TextLabel;
 			Duration: TextLabel;
 			MaxHealth: TextLabel;
 			OverallDifficulty: TextLabel;
+			MaxCombo: TextLabel;
 			KeyCount: TextLabel;
+			Difficulties: ScrollingFrame & {
+				UIListLayout: UIListLayout;
+				UIPadding: UIPadding;
+			};
 		};
 		Categories: ScrollingFrame & {
 			UIListLayout: UIListLayout;
@@ -260,7 +324,7 @@ export type UIEditorList = Frame & {
 };
 
 export type UIEditor = Frame & {
-	Lanes: Frame;
+	Lanes: CanvasGroup;
 	Info: Frame & {
 		Milliseconds: TextLabel;
 	};
@@ -391,7 +455,8 @@ export type UIBodyNote = Frame & {
 };
 
 export type UIMain = ScreenGui & {
-	Lanes: Frame;
+	Tooltip: UITooltip;
+	Lanes: CanvasGroup;
 	Transition: Frame;
 	Grade: UIGrade;
 	SongSelector: UISongSelector;

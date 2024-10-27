@@ -17,6 +17,7 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
+    "@rbxts/profileservice": "^1.4.2",
     "@rbxts/services": "^1.5.5",
     "@rbxts/string-utils": "^1.0.3",
     "@rbxts/topbar-plus": "3.0.2-ts.2",

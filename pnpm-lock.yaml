@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@rbxts/profileservice':
+        specifier: ^1.4.2
+        version: 1.4.2
       '@rbxts/services':
         specifier: ^1.5.5
         version: 1.5.5
@@ -38,6 +41,9 @@ packages:
 
   '@rbxts/compiler-types@3.0.0-types.0':
     resolution: {integrity: sha512-VGOHJPoL7+56NTatMGqQj3K7xWuzEV+aP4QD5vZiHu+bcff3kiTmtoadaF6NkJrmwfFAvbsd4Dg764ZjWNceag==}
+
+  '@rbxts/profileservice@1.4.2':
+    resolution: {integrity: sha512-xpq0bTfU7ol+7bUF9S0HZnh4xyGBZRsvVIlmAkEWt81Fv0Dep4b2NXbtV0XrT05+vZBjMTGxKJk+jGx5reQmtQ==}
 
   '@rbxts/services@1.5.5':
     resolution: {integrity: sha512-Hu7QH2ecefS60zpakKG3T2vgABydoOJqpSG7nXr59wFAbPk/cA+OcsntYPHUWyHAat0VFGZ5jNZLTLdiqfssvg==}
@@ -378,6 +384,8 @@ packages:
 snapshots:
 
   '@rbxts/compiler-types@3.0.0-types.0': {}
+
+  '@rbxts/profileservice@1.4.2': {}
 
   '@rbxts/services@1.5.5': {}
 

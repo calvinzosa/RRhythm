@@ -9,17 +9,27 @@
 					"label": "Standard Types"
 				},
 				{
-					"line": 26,
+					"line": 37,
 					"column": 21,
 					"label": "Replicated Storage"
 				},
 				{
-					"line": 48,
+					"line": 59,
+					"column": 17,
+					"label": "Profile Service Data"
+				},
+				{
+					"line": 91,
 					"column": 9,
 					"label": "Models"
 				},
 				{
-					"line": 405,
+					"line": 120,
+					"column": 17,
+					"label": "User Interface"
+				},
+				{
+					"line": 470,
 					"column": 18,
 					"label": "Gameplay"
 				}
@@ -29,77 +39,72 @@
 			"path": "src/client/MainGameplay.ts",
 			"bookmarks": [
 				{
-					"line": 96,
+					"line": 98,
 					"column": 36,
 					"label": "() Calculate Accuracy"
 				},
 				{
-					"line": 102,
+					"line": 104,
 					"column": 57,
 					"label": "() Calculate Difficulty"
 				},
 				{
-					"line": 169,
+					"line": 198,
 					"column": 36,
 					"label": "() Calculate Note Pixels/s"
 				},
 				{
-					"line": 176,
+					"line": 205,
 					"column": 82,
 					"label": "() Update HUD"
 				},
 				{
-					"line": 204,
+					"line": 233,
 					"column": 30,
 					"label": "() Calculate Note Position"
 				},
 				{
-					"line": 236,
+					"line": 265,
 					"column": 16,
 					"label": "() Hit Note"
 				},
 				{
-					"line": 301,
+					"line": 330,
 					"column": 22,
 					"label": "() Lane Pressed"
 				},
 				{
-					"line": 331,
+					"line": 360,
 					"column": 22,
 					"label": "() Lane Released"
 				},
 				{
-					"line": 405,
+					"line": 434,
 					"column": 33,
 					"label": "() Start Gameplay"
 				},
 				{
-					"line": 615,
+					"line": 644,
 					"column": 0,
 					"label": "() Gameplay Update"
 				},
 				{
-					"line": 950,
+					"line": 994,
 					"column": 0,
 					"label": "() Finish Gameplay"
 				},
 				{
-					"line": 1031,
-					"column": 6,
-					"label": "() Show Grade"
-				},
-				{
-					"line": 1101,
+					"line": 1147,
 					"column": 38,
 					"label": "() Start Song Selection"
 				},
 				{
-					"line": 1219,
+					"line": 1330,
 					"column": 16,
 					"label": "() End Song Selection"
 				},
 				{
-					"line": 1244,
+					"line": 1357,
 					"column": 45,
 					"label": "() Update Stage Preview"
 				}

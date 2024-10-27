@@ -15,6 +15,23 @@ export namespace Constants {
 			C = 'rbxassetid://86986699918371',
 			D = 'rbxassetid://71384548149260',
 		}
+		
+		export enum TopbarImages {
+			MenuIcon = 'rbxassetid://71156585213612',
+			SettingsIcon = 'rbxassetid://107092326283205',
+			ShopIcon = 'rbxassetid://105395083976216',
+			DoorIcon = 'rbxassetid://91226955387643',
+			AnimationsIcon = 'rbxassetid://86285493614316',
+			EmotesIcon = 'rbxassetid://88228932975246',
+			SkinsIcon = 'rbxassetid://72286201132727',
+			CaptionsIcon = 'rbxassetid://86282748743553',
+			ProfileIcon = 'rbxassetid://84310392364526',
+		}
+		
+		export enum TooltipImages {
+			TailLeft = 'rbxassetid://80062680955312',
+			TailRight = 'rbxassetid://103345626294143',
+		}
 	}
 	
 	export namespace Attributes {

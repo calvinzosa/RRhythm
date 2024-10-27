@@ -1,8 +1,11 @@
 import {
+	GuiService,
 	Players,
 	ReplicatedStorage,
 	RunService,
 	StarterGui,
+	TweenService,
+	UserInputService,
 	Workspace,
 } from '@rbxts/services';
 
@@ -10,7 +13,8 @@ import { $print, $package } from 'rbxts-transform-debug';
 
 import { Constants } from 'shared/Constants';
 import * as Types from 'shared/Types';
-import * as OsuBeatmapConverter from 'shared/OsuBeatmapConverter';
+import * as Utils from 'shared/Utils';
+
 import * as MainGameplay from './MainGameplay';
 import * as Editor from './Editor';
 import * as UserInput from './UserInput';
@@ -68,6 +72,47 @@ RunService.BindToRenderStep('MainUpdate', Enum.RenderPriority.Last.Value, (dt) =
 	if (MainGameplay.isPlaying) MainGameplay.gameUpdate(dt);
 });
 
+UserInputService.InputChanged.Connect((input) => {
+	if (input.UserInputType === Enum.UserInputType.MouseMovement) {
+		const playerGui = player.FindFirstChild('PlayerGui') as PlayerGui | undefined;
+		const screenGui = playerGui?.FindFirstChild('ScreenGui') as Types.UIMain | undefined;
+		if (!playerGui || !screenGui) return;
+		
+		const guiObjects = playerGui.GetGuiObjectsAtPosition(input.Position.X, input.Position.Y);
+		if (guiObjects.size() === 0) return;
+		
+		let highestObject: GuiObject | undefined = undefined;
+		
+		for (const object of guiObjects) {
+			if (object.IsDescendantOf(screenGui) && typeIs(object.GetAttribute('Tooltip'), 'string') && object.Visible) {
+				if (!highestObject || object.ZIndex > highestObject.ZIndex) highestObject = object;
+			}
+		}
+		
+		const tooltip = screenGui.Tooltip;
+		
+		if (highestObject !== undefined) {
+			const text = highestObject.GetAttribute('Tooltip') as string;
+			
+			tooltip.Left.Label.Text = text;
+			tooltip.Right.Label.Text = text;
+			
+			if ((tooltip.Left.Label.AbsolutePosition.X + tooltip.Left.Label.AbsoluteSize.X) >= screenGui.AbsoluteSize.X) {
+				tooltip.Left.Visible = false;
+				tooltip.Right.Visible = true;
+			} else {
+				tooltip.Left.Visible = true;
+				tooltip.Right.Visible = false;
+			}
+			
+			tooltip.Position = new UDim2(0, input.Position.X, 0, input.Position.Y + GuiService.TopbarInset.Height);
+			tooltip.Visible = true;
+		} else {
+			tooltip.Visible = false;
+		}
+	}
+});
+
 Topbar.Settings.toggled.Connect((isSelected) => {
 	if (isSelected) {
 		Topbar.GameMenu.lock();
@@ -117,13 +162,41 @@ Topbar.Profile.toggled.Connect((isSelected) => {
 	MainGameplay.updatePreview(preview, module.Parent as Folder, updateData, cachedCharts.get(module)!);
 });
 
-(eventsFolder.WaitForChild('EndStagePreview') as RemoteEvent).OnClientEvent.Connect((preview: Types.StagePreview) => {
+(eventsFolder.WaitForChild('StartStagePreview') as RemoteEvent).OnClientEvent.Connect((preview: Types.StagePreview) => {
+	preview.SurfaceGui.InfoHUD.Visible = true;
+	preview.SurfaceGui.InfoHUD.Position = new UDim2(0.5, 0, 0.995, 0);
+	preview.SurfaceGui.InfoHUD.Score.Text = `<stroke thickness="1" color="#000" joins="miter">Score: <b>0</b></stroke>`;
+	preview.SurfaceGui.InfoHUD.Accuracy.Text = `<stroke thickness="1" color="#000" joins="miter">Accuracy: <b>-nan(ind)%</b></stroke>`;
+	preview.SurfaceGui.InfoHUD.Combo.Text = `<stroke thickness="1" color="#000" joins="miter">Combo: <b>0x</b></stroke>`;
+	preview.SurfaceGui.InfoHUD.Misses.Text = `<stroke thickness="1" color="#000" joins="miter">Misses: <b>0</b></stroke>`;
+	
 	preview.SurfaceGui.Lanes.ClearAllChildren();
-	preview.SetAttribute(Constants.Attributes.StagePreview.IsOngoing, undefined);
+	preview.SetAttribute(Constants.Attributes.StagePreview.IsOngoing, true);
 });
 
-(eventsFolder.WaitForChild('StartStagePreview') as RemoteEvent).OnClientEvent.Connect((preview: Types.StagePreview) => {
-	preview.SetAttribute(Constants.Attributes.StagePreview.IsOngoing, true);
+(eventsFolder.WaitForChild('EndStagePreview') as RemoteEvent).OnClientEvent.Connect((preview: Types.StagePreview) => {
+	preview.SurfaceGui.InfoHUD.Visible = false;
+	
+	TweenService.Create(preview.SurfaceGui.InfoHUD, new TweenInfo(2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		Position: preview.SurfaceGui.InfoHUD.Position.add(new UDim2(-1, 0, 0, 0)),
+	}).Play();
+	
+	for (const lane of preview.SurfaceGui.Lanes.GetChildren()) {
+		if (lane.IsA('GuiObject')) {
+			const info = new TweenInfo(Utils.randomFloat(0.5, 2), Enum.EasingStyle.Quad, Enum.EasingDirection.In);
+			
+			TweenService.Create(lane, info, {
+				Position: lane.Position.add(new UDim2(0, 0, 1, 0)),
+				Rotation: math.random(-90, 90),
+			}).Play();
+			
+			Utils.destroyAfter(lane, info.Time);
+		} else {
+			lane.Destroy();
+		}
+	}
+	
+	preview.SetAttribute(Constants.Attributes.StagePreview.IsOngoing, undefined);
 });
 
 while (true) {
