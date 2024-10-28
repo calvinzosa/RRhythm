@@ -1,0 +1,9 @@
+{
+	"ClassName": "Folder",
+	"Properties": {
+		"Attributes": {
+			"Category_ShowAll": {"Bool": true},
+			"Display": {"String": "All Songs"}
+		}
+	}
+}

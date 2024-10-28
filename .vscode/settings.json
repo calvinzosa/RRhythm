@@ -1,30 +1,33 @@
 {
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"files.eol": "\n",
-    
-    "vsicons.associations.folderDefault.folder": { "icon": "robloxfolder", "format": "png" },
-    
+	
+	"vsicons.associations.folderDefault.folder": { "icon": "robloxfolder", "format": "svg" },
+	"vsicons.presets.foldersAllDefaultIcon": false,
+	
 	"vsicons.associations.files": [
-        { "icon": "rojoprojectjson", "extensions": ["default.project.json"], "filename": true, "format": "png" },
-        { "icon": "robloxmodel", "extensions": ["tsconfig.tsbuildinfo"], "filename": true, "format": "png" },
-        { "icon": "robloxconfig", "extensions": ["pnpm-lock.yaml"], "filename": true, "format": "png" },
-		{ "icon": "robloxlocal", "extensions": ["client.ts", "client.luau", "client.lua"], "format": "png" },
-        { "icon": "robloxserver", "extensions": ["server.ts", "server.luau", "server.lua"], "format": "png" },
-        { "icon": "robloxmodule", "extensions": ["ts", "luau", "lua"], "format": "png" },
-        { "icon": "robloxscriptconfig", "extensions": ["d.ts"], "format": "png" },
-        { "icon": "robloxjson", "extensions": ["json"], "format": "png" },
+		{ "icon": "rojoprojectjson", "extensions": ["default.project.json"], "filename": true, "format": "svg" },
+		{ "icon": "robloxconfig", "extensions": ["pnpm-lock.yaml"], "filename": true, "format": "svg" },
+		{ "icon": "robloxscriptdoc", "extensions": ["TODO.txt"], "filename": true, "format": "svg" },
+		{ "icon": "robloxmodule", "extensions": ["tsconfig.tsbuildinfo"], "filename": true, "format": "svg" },
+		{ "icon": "robloxlocal", "extensions": ["client.ts", "client.luau", "client.lua"], "format": "svg" },
+		{ "icon": "robloxserver", "extensions": ["server.ts", "server.luau", "server.lua"], "format": "svg" },
+		{ "icon": "robloxmodule", "extensions": ["ts", "luau", "lua"], "format": "svg" },
+		{ "icon": "robloxscriptconfig", "extensions": ["d.ts"], "format": "svg" },
+		{ "icon": "robloxjson", "extensions": ["json"], "format": "svg" },
+		{ "icon": "robloxmodel", "extensions": ["model.json"], "format": "svg" },
 	],
-    
-    "vsicons.associations.folders": [
-        { "icon": "robloxvscode", "extensions": [".vscode"], "format": "png" },
-        { "icon": "robloxroot", "extensions": ["out", "src"], "format": "png" },
-        { "icon": "robloxinclude", "extensions": ["include"], "format": "png" },
-        { "icon": "robloxshared", "extensions": ["shared"], "format": "png" },
-        { "icon": "robloxclient", "extensions": ["client"], "format": "png" },
-        { "icon": "robloxserver", "extensions": ["server"], "format": "png" },
-        { "icon": "robloxpackage", "extensions": ["node_modules"], "format": "png" },
-        { "icon": "robloxsounds", "extensions": ["songs"], "format": "png" },
-    ],
+	
+	"vsicons.associations.folders": [
+		{ "icon": "robloxvscode", "extensions": [".vscode"], "format": "svg" },
+		{ "icon": "robloxroot", "extensions": ["out", "src"], "format": "svg" },
+		{ "icon": "robloxinclude", "extensions": ["include"], "format": "svg" },
+		{ "icon": "robloxshared", "extensions": ["shared"], "format": "svg" },
+		{ "icon": "robloxclient", "extensions": ["client"], "format": "svg" },
+		{ "icon": "robloxserver", "extensions": ["server"], "format": "svg" },
+		{ "icon": "robloxpackage", "extensions": ["node_modules"], "format": "svg" },
+		{ "icon": "robloxsounds", "extensions": ["songs"], "format": "svg" },
+	],
     
     "codegraphy.connectionType": "Interaction",
     "codegraphy.nodeSize": "Connections",

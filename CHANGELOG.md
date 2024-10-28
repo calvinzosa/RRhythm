@@ -1,15 +1,10 @@
-## Changelog 10/27/2024
+## Changelog 10/28/2024
 
 ### Additions:
-- Added TestChart
-- Added tooltips
-- Added topbar
-- Added tokens
-- Added data saving
+- Added in-game viewable changelog, loads the markdown from the Github repository
+- Added settings interface
+- 
 ### Changes:
-- Added end animation for stage previews
-- Stage previews show score, accuracy, combo, and misses
-- Added song/category button colors
+- Removed expandable topbar menu button
 ### Bug Fixes:
-- Fixed end time of songs not including the end millisecond of hold notes
-- Fixed stage preview de-attaching the wrong player number
+- Fixed tooltop text not wrapping correctly

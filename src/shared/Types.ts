@@ -33,12 +33,31 @@ export type InfoUpdateData =
 		isSelected: true,
 		songTitle: string,
 		chart: Chart,
-	}
+	};
+
+export type PlayerSettings = {
+	TextSize: number;
+	LaneWidth: number;
+};
+
+type PlayerSettingInt = {
+	Type: 'int';
+	Default: number;
+	Min?: number;
+	Max?: number;
+};
+
+export const PlayerSettingTypes = {
+	TextSize: { Type: 'int', Min: 1, Max: 500, Default: 100 } as PlayerSettingInt,
+	LaneWidth: { Type: 'int', Min: 1, Max: 1920, Default: 70 } as PlayerSettingInt,
+};
 
 // Replicated Storage
 
 export type EventsFolder = Folder & {
 	ChooseSong: RemoteFunction;
+	UpdateSettings: RemoteFunction;
+	LoadSettings: RemoteEvent;
 	JoinStage: RemoteEvent;
 	UpdateStats: RemoteEvent;
 	StartSongSelection: RemoteEvent;
@@ -141,6 +160,55 @@ export type UITooltip = Frame & {
 
 export type UIGrade = Frame & {
 	Icon: ImageLabel;
+};
+
+export type UISettingsInputInt = Frame & {
+	Label: TextLabel;
+	Input: TextBox & {
+		UIPadding: UIPadding;
+	};
+};
+
+export type UISettingsContainer = Frame & {
+	UICorner: UICorner;
+	UIListLayout: UIListLayout;
+	UIPadding: UIPadding;
+	Content: ScrollingFrame & {
+		UIFlexItem: UIFlexItem;
+		UIPadding: UIPadding;
+		UIListLayout: UIListLayout;
+		TextSize: UISettingsInputInt;
+		LaneWidth: UISettingsInputInt;
+	};
+	Topbar: Frame & {
+		Close: TextButton & {
+			UIAspectRatioConstraint: UIAspectRatioConstraint;
+		};
+		Title: TextLabel & {
+			UIFlexItem: UIFlexItem;
+		};
+		UIListLayout: UIListLayout;
+	};
+};
+
+export type UIChangelogsContainer = Frame & {
+	UICorner: UICorner;
+	UIListLayout: UIListLayout;
+	UIPadding: UIPadding;
+	Content: ScrollingFrame & {
+		Markdown: Frame;
+		UIFlexItem: UIFlexItem;
+		UIPadding: UIPadding;
+	};
+	Topbar: Frame & {
+		Close: TextButton & {
+			UIAspectRatioConstraint: UIAspectRatioConstraint;
+		};
+		Title: TextLabel & {
+			UIFlexItem: UIFlexItem;
+		};
+		UIListLayout: UIListLayout;
+	};
 };
 
 export type UISongSelector = Frame & {
@@ -458,6 +526,8 @@ export type UIMain = ScreenGui & {
 	Tooltip: UITooltip;
 	Lanes: CanvasGroup;
 	Transition: Frame;
+	SettingsContainer: UISettingsContainer;
+	ChangelogsContainer: UIChangelogsContainer;
 	Grade: UIGrade;
 	SongSelector: UISongSelector;
 	StatsContainer: UIStatsContainer;

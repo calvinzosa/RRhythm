@@ -4,16 +4,11 @@ import {
 } from '@rbxts/services';
 
 import { Icon } from '@rbxts/topbar-plus';
-import { $print } from 'rbxts-transform-debug';
 
 import { Constants } from 'shared/Constants';
 
-const player = Players.LocalPlayer;
-
 Icon.modifyBaseTheme(['IconLabel', 'FontFace', Font.fromEnum(Enum.Font.BuilderSans)]);
 Icon.modifyBaseTheme(['NoticeLabel', 'FontFace', Font.fromEnum(Enum.Font.BuilderSans)]);
-
-export const Settings = new Icon().setImage(Constants.ImageIds.TopbarImages.SettingsIcon).setImageScale(0.75).setCaption('Settings').oneClick(false).autoDeselect(true);
 
 export const ShopEnter = new Icon().setImage(Constants.ImageIds.TopbarImages.DoorIcon).setLabel('Enter').oneClick(true);
 export const ShopAnimations = new Icon().setImage(Constants.ImageIds.TopbarImages.AnimationsIcon).setLabel('Animations').oneClick(true);
@@ -28,18 +23,33 @@ export const ShopDropdown = new Icon().setImage(Constants.ImageIds.TopbarImages.
 		ShopEmotes,
 		ShopSkins,
 		ShopCaptions,
-	]).modifyTheme(['Dropdown', 'MaxIcons', 5]);
+	]).modifyTheme(['Dropdown', 'MaxIcons', 5]).align('Left');
 
-export const Profile = new Icon().setImage(Constants.ImageIds.TopbarImages.ProfileIcon).setImageScale(0.75).setCaption('Profile').oneClick(false).autoDeselect(true);
+export const Settings = new Icon()
+	.setImage(Constants.ImageIds.TopbarImages.SettingsIcon).setImageScale(0.9).setCaption('Settings').oneClick(false).autoDeselect(true).align('Left');
 
-export const GameMenu = new Icon().setImage(Constants.ImageIds.TopbarImages.MenuIcon).setImageScale(0.75).setCaption('Game Menu').setMenu([
-	Settings,
-	ShopDropdown,
-	Profile,
-]);
+export const Profile = new Icon()
+	.setImage(Constants.ImageIds.TopbarImages.ProfileIcon).setImageScale(0.75).setCaption('Profile').oneClick(false).autoDeselect(true).align('Right');
+
+export const Changelogs = new Icon()
+	.setImage(Constants.ImageIds.TopbarImages.ChangelogsIcon).setImageScale(0.9).setCaption('Changelogs').oneClick(false).autoDeselect(true).align('Right');
 
 ShopEnter.selected.Connect(() => ShopDropdown.deselect());
 ShopAnimations.selected.Connect(() => ShopDropdown.deselect());
 ShopEmotes.selected.Connect(() => ShopDropdown.deselect());
 ShopSkins.selected.Connect(() => ShopDropdown.deselect());
 ShopCaptions.selected.Connect(() => ShopDropdown.deselect());
+
+export function disableMenu() {
+	Settings.deselect().lock();
+	Profile.deselect().lock();
+	Changelogs.deselect().lock();
+	ShopDropdown.deselect().lock();
+}
+
+export function enableMenu() {
+	Settings.unlock().deselect();
+	Profile.unlock().deselect();
+	Changelogs.unlock().deselect();
+	ShopDropdown.unlock().deselect();
+}

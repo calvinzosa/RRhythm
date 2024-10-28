@@ -26,11 +26,7 @@ export namespace Constants {
 			SkinsIcon = 'rbxassetid://72286201132727',
 			CaptionsIcon = 'rbxassetid://86282748743553',
 			ProfileIcon = 'rbxassetid://84310392364526',
-		}
-		
-		export enum TooltipImages {
-			TailLeft = 'rbxassetid://80062680955312',
-			TailRight = 'rbxassetid://103345626294143',
+			ChangelogsIcon = 'rbxassetid://81203133523879',
 		}
 	}
 	

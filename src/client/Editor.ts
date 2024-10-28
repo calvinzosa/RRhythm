@@ -403,7 +403,7 @@ export function init() {
 			
 			if ((yOffset >= 0 && yOffset < laneHeight)
 				|| (noteData.type === 1 && tailOffset >= 0 && tailOffset < laneHeight)
-    			|| (noteData.type === 1 && yOffset > laneHeight && tailOffset < 0)
+				|| (noteData.type === 1 && yOffset > laneHeight && tailOffset < 0)
 			) {
 				if (noteData.type === 0) {
 					let note = laneContainer.Notes.FindFirstChild(`${i}.0`) as Types.UINote | undefined;

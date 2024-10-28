@@ -1,8 +1,8 @@
 {
-    "ClassName": "Sound",
-    "Properties": {
-        "SoundId": {
-            "String": "rbxassetid://94479862680561"
-        }
-    }
+	"ClassName": "Sound",
+	"Properties": {
+		"SoundId": {
+			"String": "rbxassetid://94479862680561"
+		}
+	}
 }

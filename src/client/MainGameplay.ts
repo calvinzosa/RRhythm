@@ -640,8 +640,7 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 export function gameUpdate(dt: number) {
 	if (music === undefined || stageModel === undefined) return;
 	
-	if (!Topbar.GameMenu.locked) Topbar.GameMenu.lock();
-	if (Topbar.GameMenu.isSelected) Topbar.GameMenu.deselect();
+	Topbar.disableMenu();
 	
 	for (const hotkey of laneHotkeys) {
 		if (useAutoplay || devAutoPlay) hotkey.canPress = false;
@@ -992,7 +991,7 @@ export function finish() {
 		$print('Finishing gameplay...');
 		
 		isPlaying = false;
-		Topbar.GameMenu.unlock();
+		Topbar.enableMenu();
 		
 		music = undefined;
 		
@@ -1160,8 +1159,7 @@ export function startSongSelection() {
 		
 		const connections: RBXScriptConnection[] = [];
 		
-		if (!Topbar.GameMenu.locked) Topbar.GameMenu.lock();
-		if (Topbar.GameMenu.isSelected) Topbar.GameMenu.deselect();
+		Topbar.disableMenu();
 		
 		connections.push(screenGui.SongSelector.Topbar.Close.MouseButton1Click.Once(() => {
 			for (const connection of connections) connection.Disconnect();
@@ -1345,7 +1343,7 @@ export function endSongSelection(difficulty?: ModuleScript, resolve?: (difficult
 		Rotation: 180,
 	}).Play();
 	
-	if (Topbar.GameMenu.locked) Topbar.GameMenu.unlock();
+	Topbar.enableMenu();
 	
 	if (difficulty !== undefined && resolve !== undefined) resolve(difficulty as ModuleScript);
 }

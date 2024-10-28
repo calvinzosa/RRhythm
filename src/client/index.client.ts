@@ -4,31 +4,49 @@ import {
 	ReplicatedStorage,
 	RunService,
 	StarterGui,
+	TextService,
 	TweenService,
 	UserInputService,
 	Workspace,
 } from '@rbxts/services';
 
-import { $print, $package } from 'rbxts-transform-debug';
+import { $print, $package, $git } from 'rbxts-transform-debug';
 
 import { Constants } from 'shared/Constants';
 import * as Types from 'shared/Types';
 import * as Utils from 'shared/Utils';
 
 import * as MainGameplay from './MainGameplay';
+import * as Settings from './Settings';
 import * as Editor from './Editor';
 import * as UserInput from './UserInput';
-import * as Preloader from './Preloader';
 import * as Topbar from './Topbar';
+import * as Markdown from './Markdown';
+
+import {} from './Preloader';
 
 const player = Players.LocalPlayer;
+const screenGui = player.WaitForChild('PlayerGui').WaitForChild('ScreenGui') as Types.UIMain;
 const eventsFolder = ReplicatedStorage.WaitForChild('Events') as Types.EventsFolder;
 const stagesFolder = Workspace.WaitForChild('Stages') as Folder;
+
+let previousTextBounds: [GuiObject | undefined, Vector2 | undefined] = [undefined, undefined];
 
 $print(`Hello ${player.Name}!`);
 
 UserInput.init();
-Preloader.preload();
+Settings.init();
+
+task.spawn(() => {
+	const changelogs = ReplicatedStorage.WaitForChild('Changelogs') as StringValue;
+	let start = '# Contents of `CHANGELOGS.md`\n--------\n';
+	
+	Markdown.parse(start + changelogs.Value, screenGui.ChangelogsContainer.Content.Markdown);
+	
+	changelogs.Changed.Connect((newValue) => {
+		Markdown.parse(start + newValue, screenGui.ChangelogsContainer.Content.Markdown);
+	});
+});
 
 const cachedCharts = new Map<ModuleScript, Types.Chart>();
 
@@ -94,8 +112,29 @@ UserInputService.InputChanged.Connect((input) => {
 		if (highestObject !== undefined) {
 			const text = highestObject.GetAttribute('Tooltip') as string;
 			
+			const params = new Instance('GetTextBoundsParams');
+			params.Text = text;
+			params.Width = 400;
+			params.Size = 32;
+			params.Font = Font.fromEnum(Enum.Font.BuilderSans);
+			
+			let textBounds = new Vector2(params.Width, params.Size);
+			
+			if (previousTextBounds[0] !== highestObject) {
+				try {
+					textBounds = TextService.GetTextBoundsAsync(params);
+				} catch (err) {  }
+			} else if (previousTextBounds[1] !== undefined) textBounds = previousTextBounds[1];
+			
+			previousTextBounds[0] = highestObject;
+			previousTextBounds[1] = textBounds;
+			
+			params.Destroy();
+			
 			tooltip.Left.Label.Text = text;
 			tooltip.Right.Label.Text = text;
+			tooltip.Right.Label.Size = new UDim2(0, textBounds.X + 12, 0, textBounds.Y + 12);
+			tooltip.Left.Label.Size = new UDim2(0, textBounds.X + 12, 0, textBounds.Y + 12);
 			
 			if ((tooltip.Left.Label.AbsolutePosition.X + tooltip.Left.Label.AbsoluteSize.X) >= screenGui.AbsoluteSize.X) {
 				tooltip.Left.Visible = false;
@@ -113,24 +152,44 @@ UserInputService.InputChanged.Connect((input) => {
 	}
 });
 
+function toggleContainer(container: GuiObject, isSelected: boolean) {
+	if (isSelected) {
+		container.Position = new UDim2(0.5, 0, -1, 0);
+		container.Size = new UDim2(0.7, 0, 0.9, GuiService.TopbarInset.Height * -1.5);
+		container.Rotation = 90;
+		container.Visible = true;
+		
+		TweenService.Create(container, new TweenInfo(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position: new UDim2(0.5, 0, 0.5, GuiService.TopbarInset.Height.idiv(2)),
+			Rotation: 0,
+		}).Play();
+	} else {
+		container.Position = new UDim2(0.5, 0, 0.5, GuiService.TopbarInset.Height.idiv(2));
+		container.Rotation = 0;
+		
+		TweenService.Create(container, new TweenInfo(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			Position: new UDim2(0.5, 0, 2, 0),
+			Rotation: -90,
+		}).Play();
+	}
+}
+
 Topbar.Settings.toggled.Connect((isSelected) => {
-	if (isSelected) {
-		Topbar.GameMenu.lock();
-	} else {
-		if (!Topbar.Profile.isSelected) Topbar.GameMenu.unlock();
-	}
+	const container = screenGui.SettingsContainer;
+	toggleContainer(container, isSelected);
 });
 
-Topbar.ShopEnter.selected.Connect(() => {
-	
+screenGui.SettingsContainer.Topbar.Close.MouseButton1Click.Connect(() => {
+	Topbar.Settings.deselect();
 });
 
-Topbar.Profile.toggled.Connect((isSelected) => {
-	if (isSelected) {
-		Topbar.GameMenu.lock();
-	} else {
-		if (!Topbar.Settings.isSelected) Topbar.GameMenu.unlock();
-	}
+Topbar.Changelogs.toggled.Connect((isSelected) => {
+	const container = screenGui.ChangelogsContainer;
+	toggleContainer(container, isSelected);
+});
+
+screenGui.ChangelogsContainer.Topbar.Close.MouseButton1Click.Connect(() => {
+	Topbar.Changelogs.deselect();
 });
 
 (eventsFolder.WaitForChild('StartSongSelection') as RemoteEvent).OnClientEvent.Connect(async () => {
@@ -210,82 +269,3 @@ while (true) {
 		task.wait(1);
 	}
 }
-
-// task.wait(2);
-
-// Gameplay.start({
-//     metadata: {
-//         title: 'Test Chart #1',
-//         audioName: 'testing/audio/test',
-//         setName: 'testing',
-//         description: 'first chart ever made for this game',
-//         difficulty: '--',
-//         source: '--',
-//         artist: '--',
-//         mappers: [156926145],
-//         searchTags: ['test', 'testing'],
-//         totalLanes: 4,
-//     },
-//     difficulty: {
-//         damageRate: 5,
-//         overallDifficulty: 2
-//     },
-//     timings: [
-//         { type: 0, millisecond: 0, bpm: 120, scrollSpeed: 1, volume: 100 },
-//     ],
-//     events: [
-		
-//     ],
-//     notes: [
-//         { type: 0, millisecond: 0, lane: 0 },
-//         { type: 0, millisecond: 100, lane: 1 },
-//         { type: 0, millisecond: 200, lane: 2 },
-//         { type: 0, millisecond: 300, lane: 3 },
-//         { type: 0, millisecond: 400, lane: 0 },
-//         { type: 0, millisecond: 500, lane: 1 },
-//         { type: 0, millisecond: 600, lane: 2 },
-//         { type: 0, millisecond: 700, lane: 3 },
-//         { type: 0, millisecond: 800, lane: 0 },
-//         { type: 0, millisecond: 900, lane: 1 },
-//     ]
-// }, true, false).then((data) => Gameplay.showGrade(...data));
-
-// Gameplay.start({
-//     metadata: {
-//         title: 'Test Chart #1',
-//         audioName: 'testing/audio/test',
-//         setName: 'testing',
-//         description: 'first chart ever made for this game',
-//         difficulty: '--',
-//         source: '--',
-//         artist: '--',
-//         mappers: [156926145],
-//         searchTags: ['test', 'testing'],
-//         totalLanes: 4,
-//     },
-//     difficulty: {
-//         damageRate: 5,
-//         overallDifficulty: 2
-//     },
-//     timings: [
-//         { type: 0, millisecond: 0, bpm: 120, scrollSpeed: 1, volume: 100 },
-//     ],
-//     events: [
-		
-//     ],
-//     notes: [
-//         { type: 0, millisecond: 1000, lane: 0 },
-//         { type: 0, millisecond: 1500, lane: 1 },
-//         { type: 0, millisecond: 2000, lane: 2 },
-//         { type: 0, millisecond: 2500, lane: 3 },
-//         { type: 0, millisecond: 3000, lane: 2 },
-//         { type: 0, millisecond: 3500, lane: 1 },
-//         { type: 0, millisecond: 4000, lane: 0 },
-//         { type: 0, millisecond: 4500, lane: 1 },
-//         { type: 0, millisecond: 5000, lane: 2 },
-//         { type: 0, millisecond: 5500, lane: 3 },
-//         { type: 0, millisecond: 6000, lane: 2 },
-//         { type: 0, millisecond: 6500, lane: 1 },
-//         { type: 0, millisecond: 7000, lane: 0 },
-//     ]
-// });

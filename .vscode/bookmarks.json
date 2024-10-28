@@ -4,32 +4,27 @@
 			"path": "src/shared/Types.ts",
 			"bookmarks": [
 				{
-					"line": 21,
-					"column": 17,
-					"label": "Standard Types"
-				},
-				{
-					"line": 37,
+					"line": 54,
 					"column": 21,
 					"label": "Replicated Storage"
 				},
 				{
-					"line": 59,
+					"line": 78,
 					"column": 17,
 					"label": "Profile Service Data"
 				},
 				{
-					"line": 91,
+					"line": 110,
 					"column": 9,
 					"label": "Models"
 				},
 				{
-					"line": 120,
+					"line": 139,
 					"column": 17,
 					"label": "User Interface"
 				},
 				{
-					"line": 470,
+					"line": 540,
 					"column": 18,
 					"label": "Gameplay"
 				}
@@ -84,27 +79,27 @@
 					"label": "() Start Gameplay"
 				},
 				{
-					"line": 644,
+					"line": 643,
 					"column": 0,
 					"label": "() Gameplay Update"
 				},
 				{
-					"line": 994,
+					"line": 993,
 					"column": 0,
 					"label": "() Finish Gameplay"
 				},
 				{
-					"line": 1147,
+					"line": 1146,
 					"column": 38,
 					"label": "() Start Song Selection"
 				},
 				{
-					"line": 1330,
+					"line": 1328,
 					"column": 16,
 					"label": "() End Song Selection"
 				},
 				{
-					"line": 1357,
+					"line": 1355,
 					"column": 45,
 					"label": "() Update Stage Preview"
 				}
