@@ -3,7 +3,6 @@
 ### Additions:
 - Added in-game viewable changelog, loads the markdown from the Github repository
 - Added settings interface
-- 
 ### Changes:
 - Removed expandable topbar menu button
 ### Bug Fixes:
