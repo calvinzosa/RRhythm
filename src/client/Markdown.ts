@@ -1,6 +1,6 @@
 import * as MarkdownParser from 'shared/MarkdownParser';
 
-export function parse(markdown: string, frame: GuiObject, fontSize=16) {
+export function parse(markdown: string, frame: GuiObject) {
 	let i = 0;
 	
 	frame.ClearAllChildren();
@@ -21,7 +21,7 @@ export function parse(markdown: string, frame: GuiObject, fontSize=16) {
 			label.RichText = true;
 			label.FontFace = Font.fromEnum(Enum.Font.BuilderSans);
 			label.Text = '\t'.rep(blockData.Indent ?? 0) + (blockData.Text ?? '');
-			label.TextSize = fontSize;
+			label.SetAttribute('TextSize', 'N');
 			label.TextColor3 = Color3.fromRGB(255, 255, 255);
 			label.TextXAlignment = Enum.TextXAlignment.Left;
 			label.TextYAlignment = Enum.TextYAlignment.Top;
@@ -37,12 +37,11 @@ export function parse(markdown: string, frame: GuiObject, fontSize=16) {
 			label.FontFace = Font.fromEnum(Enum.Font.BuilderSans);
 			label.Text = '\t'.rep(blockData.Indent ?? 0) + '<b>' + (blockData.Text ?? '') + '</b>';
 			
-			if (blockData.Level === 1) label.TextSize = fontSize * 1.5;
-			else if (blockData.Level === 2) label.TextSize = fontSize * 1.2;
-			else if (blockData.Level === 3) label.TextSize = fontSize * 1.1;
-			else if (blockData.Level === 4) label.TextSize = fontSize * 1.05;
-			else if (blockData.Level === 5) label.TextSize = fontSize * 1.025;
-			else label.TextSize = fontSize;
+			if (blockData.Level === 1) label.SetAttribute('TextSize', 'XL');
+			else if (blockData.Level === 2) label.SetAttribute('TextSize', 'L');
+			else if (blockData.Level === 3) label.SetAttribute('TextSize', 'L');
+			else if (blockData.Level === 4) label.SetAttribute('TextSize', 'M');
+			else label.SetAttribute('TextSize', 'N');
 			
 			label.TextColor3 = Color3.fromRGB(255, 255, 255);
 			label.TextXAlignment = Enum.TextXAlignment.Left;
@@ -72,7 +71,7 @@ export function parse(markdown: string, frame: GuiObject, fontSize=16) {
 					label.RichText = true;
 					label.FontFace = Font.fromEnum(Enum.Font.BuilderSans);
 					label.Text = '\t'.rep((blockData.Indent ?? 0) + line.Level) + ' • ' + (line.Text ?? '');
-					label.TextSize = fontSize;
+					label.SetAttribute('TextSize', 'N');
 					label.TextColor3 = Color3.fromRGB(255, 255, 255);
 					label.TextXAlignment = Enum.TextXAlignment.Left;
 					label.TextYAlignment = Enum.TextYAlignment.Top;
@@ -85,7 +84,7 @@ export function parse(markdown: string, frame: GuiObject, fontSize=16) {
 		} else if (blockType === MarkdownParser.BlockType.Ruler) {
 			const container = new Instance('Frame');
 			container.BackgroundTransparency = 1;
-			container.Size = new UDim2(1, 0, 0, fontSize);
+			container.Size = new UDim2(1, 0, 0, 20);
 			
 			const line = new Instance('Frame');
 			line.BackgroundColor3 = Color3.fromRGB(255, 255, 255);

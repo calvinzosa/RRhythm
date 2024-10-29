@@ -35,21 +35,118 @@ export type InfoUpdateData =
 		chart: Chart,
 	};
 
-export type PlayerSettings = {
-	TextSize: number;
-	LaneWidth: number;
-};
-
-type PlayerSettingInt = {
+type PlayerSettingInt = BasePlayerSetting & {
 	Type: 'int';
 	Default: number;
 	Min?: number;
 	Max?: number;
+	Filter?: (value: number) => number;
 };
 
+type PlayerSettingFloat = BasePlayerSetting & {
+	Type: 'float';
+	Default: number;
+	Min?: number;
+	Max?: number;
+	Filter?: (value: number) => number;
+};
+
+type PlayerSettingString = BasePlayerSetting & {
+	Type: 'string';
+	Default: string;
+	MaxLength?: number;
+	AllowedCharacters?: string;
+	Filter?: (value: string) => string;
+};
+
+type BasePlayerSetting = {
+	Type: string;
+	Tooltip: string;
+	Label: string;
+}
+
 export const PlayerSettingTypes = {
-	TextSize: { Type: 'int', Min: 1, Max: 500, Default: 100 } as PlayerSettingInt,
-	LaneWidth: { Type: 'int', Min: 1, Max: 1920, Default: 70 } as PlayerSettingInt,
+	TextSizeS: {
+		Type: 'int',
+		Label: 'Text Size (S)',
+		Tooltip: 'Text size in pixels for small text (0px to 500px, integer)',
+		Default: 18,
+		Min: 0,
+		Max: 500,
+	} as PlayerSettingInt,
+	
+	TextSizeN: {
+		Type: 'int',
+		Label: 'Text Size (N)',
+		Tooltip: 'Text size in pixels for normal text (0px to 500px, integer)',
+		Default: 24,
+		Min: 0,
+		Max: 500,
+	} as PlayerSettingInt,
+	
+	TextSizeM: {
+		Type: 'int',
+		Label: 'Text Size (M)',
+		Tooltip: 'Text size in pixels for medium text (0px to 500px, integer)',
+		Default: 30,
+		Min: 0,
+		Max: 500,
+	} as PlayerSettingInt,
+	
+	TextSizeL: {
+		Type: 'int',
+		Label: 'Text Size (L)',
+		Tooltip: 'Text size in pixels for large text (0px to 500px, integer)',
+		Default: 36,
+		Min: 0,
+		Max: 500,
+	} as PlayerSettingInt,
+	
+	TextSizeXL: {
+		Type: 'int',
+		Label: 'Text Size (XL)',
+		Tooltip: 'Text size in pixels for extra large text (0px to 500px, integer)',
+		Default: 42,
+		Min: 0,
+		Max: 500,
+	} as PlayerSettingInt,
+	
+	LaneWidth: {
+		Type: 'int',
+		Label: 'Lane Width (px)',
+		Tooltip: 'Width of every lane in gameplay (1px to 1920px, integer)',
+		Default: 70,
+		Min: 1,
+		Max: 1920,
+	} as PlayerSettingInt,
+	
+	NoteSpeed: {
+		Type: 'float',
+		Label: 'Note Speed',
+		Tooltip: 'The speed of the notes, similar to osu!mania\'s speed calculation but a bit faster (1 to 50, float)',
+		Default: 15,
+		Min: 1,
+		Max: 50,
+		Filter: (value) => math.floor(value * 1000) / 1000,
+	} as PlayerSettingFloat,
+	
+	Test: {
+		Type: 'string',
+		Label: 'TestSetting',
+		Tooltip: '',
+		Default: 'Textbox Input',
+	} as PlayerSettingString,
+};
+
+export type PlayerSettings = {
+	TextSizeS: number;
+	TextSizeN: number;
+	TextSizeM: number;
+	TextSizeL: number;
+	TextSizeXL: number;
+	LaneWidth: number;
+	NoteSpeed: number;
+	Test: string;
 };
 
 // Replicated Storage
@@ -163,6 +260,13 @@ export type UIGrade = Frame & {
 };
 
 export type UISettingsInputInt = Frame & {
+	Label: TextLabel;
+	Input: TextBox & {
+		UIPadding: UIPadding;
+	};
+};
+
+export type UISettingsInputString = Frame & {
 	Label: TextLabel;
 	Input: TextBox & {
 		UIPadding: UIPadding;

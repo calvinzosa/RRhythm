@@ -3,8 +3,11 @@
  * @param number The number to format
  * @returns Formatted number
  */
-export function formatNumber(number: number): string {
-	return number >= 0 ? tostring(number).reverse().gsub('(%d%d%d)', '%1,')[0].reverse().gsub('^,', '')[0] : `-${formatNumber(number * -1)}`;
+export function formatNumber(number: number, rounded=false): string {
+	const [wholeNumber, decimal] = math.modf(number);
+	const formatted = number >= 0 ? tostring(wholeNumber).reverse().gsub('(%d%d%d)', '%1,')[0].reverse().gsub('^,', '')[0] : `-${formatNumber(wholeNumber * -1)}`;
+	
+	return formatted + (rounded ? `.${math.abs(decimal) > 0 ? string.sub(tostring(decimal), 3) : 0}` : '');
 }
 
 /**

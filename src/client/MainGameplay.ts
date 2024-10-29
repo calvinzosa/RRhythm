@@ -14,6 +14,7 @@ import { Constants } from 'shared/Constants';
 import LZWCompression from 'shared/LZWCompression';
 
 import * as UserInput from './UserInput';
+import * as Settings from './Settings';
 import * as Topbar from './Topbar';
 
 export let isPlaying = false;
@@ -96,8 +97,17 @@ if (RunService.IsStudio()) {
 	toggleAutoplay.onPress(() => devAutoPlay = !devAutoPlay);
 }
 
+Settings.onSettingChanged('LaneWidth', (value) => {
+	laneWidth = value;
+});
+
+Settings.onSettingChanged('NoteSpeed', (value) => {
+	noteSpeed = value;
+});
+
 export function calculateAccuracy(nMax: number, n300: number, n200: number, n100: number, n50: number, nMiss: number): number {
-	// Same as osu!mania's accuracy formula
+	// this is the same as osu!mania's accuracy formula (score v1)
+	// https://osu.ppy.sh/wiki/en/Gameplay/Accuracy#osu!mania
 	const accuracy = (300 * (nMax + n300) + 200 * n200 + 100 * n100 + 50 * n50) / (300 * (nMax + n300 + n200 + n100 + n50 + nMiss));
 	return accuracy * 100;
 }
@@ -128,6 +138,7 @@ export function calculateDifficulty(chart: Types.Chart) {
 	const averageNoteDensity = chart.notes.size() / (length / 1000);
 	highestNoteDensity = math.max(highestNoteDensity, averageNoteDensity);
 	
+	// i mean it works i guess...
 	const difficultyNumber = (5 / 2) * (
 		(
 			((10 / chart.difficulty.maxHealth) ** (2 / 5)) *
@@ -434,6 +445,8 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 		
 		$print('Initializing gameplay...');
 		
+		Topbar.disableMenu();
+		
 		let selectedSkinFolder = skinsFolder.WaitForChild(selectedNoteSkin, 5) as Types.SkinFolder | undefined;
 		if (!selectedSkinFolder) selectedSkinFolder = skinsFolder.WaitForChild('Circles V1') as Types.SkinFolder;
 		
@@ -639,8 +652,6 @@ export function start(chart: Types.Chart, songFolder: Folder, stage: Types.Stage
 
 export function gameUpdate(dt: number) {
 	if (music === undefined || stageModel === undefined) return;
-	
-	Topbar.disableMenu();
 	
 	for (const hotkey of laneHotkeys) {
 		if (useAutoplay || devAutoPlay) hotkey.canPress = false;
@@ -1070,13 +1081,14 @@ export function finish() {
 export function showGrade(chart: Types.Chart, totalScore: number, notesMax: number, notes300: number, notes200: number, notes100: number, notes50: number, notesMisses: number, noteCombo: number, highestCombo: number, maxError: number, minError: number) {
 	const accuracy = calculateAccuracy(notesMax, notes300, notes200, notes100, notes50, notesMisses);
 	
-	let grade: Types.Grade = 'D';
+	let grade: Types.Grade;
 	
 	if (accuracy === 100) grade = 'X';
 	else if (accuracy >= 95) grade = 'S';
 	else if (accuracy >= 90) grade = 'A';
 	else if (accuracy >= 80) grade = 'B';
 	else if (accuracy >= 70) grade = 'C';
+	else grade = 'D';
 	
 	screenGui.Grade.Icon.Image = Constants.ImageIds.RankImages[grade];
 	screenGui.Grade.Position = new UDim2(1.8, 0, 0.5, 0);
@@ -1093,18 +1105,20 @@ export function showGrade(chart: Types.Chart, totalScore: number, notesMax: numb
 		else if (note.type === 1) maxCombo += 2;
 	}
 	
-	screenGui.StatsContainer.Content.Marvelous.Text = `Marvelous: ${Utils.formatNumber(notesMax)}`;
-	screenGui.StatsContainer.Content.Perfect.Text = `Perfect: ${Utils.formatNumber(notes300)}`;
-	screenGui.StatsContainer.Content.Great.Text = `Great: ${Utils.formatNumber(notes200)}`;
-	screenGui.StatsContainer.Content.Ok.Text = `Ok: ${Utils.formatNumber(notes100)}`;
-	screenGui.StatsContainer.Content.Bad.Text = `Bad: ${Utils.formatNumber(notes50)}`;
-	screenGui.StatsContainer.Content.Misses.Text = `Misses: ${Utils.formatNumber(notesMisses)}`;
-	screenGui.StatsContainer.Content.Accuracy.Text = `Accuracy: ${string.format('%.3f', accuracy)}%`;
-	screenGui.StatsContainer.Content.HitError.Text = `Avg. Hit Error: +${string.format('%.1f', math.abs(maxError))}ms, -${string.format('%.1f', math.abs(minError))}ms`;
-	screenGui.StatsContainer.Content.HighestCombo.Text = `Highest Combo: ${Utils.formatNumber(highestCombo)}x / ${Utils.formatNumber(maxCombo)}x`;
-	screenGui.StatsContainer.Content.TotalScore.Text = `Total Score: ${Utils.formatNumber(totalScore)} / ${Utils.formatNumber(maxScore)}`;
+	const statsContent = screenGui.StatsContainer.Content;
 	
-	screenGui.StatsContainer.Content.Accuracy.SetAttribute('Tooltip', `Full Accuracy: ${accuracy}%`);
+	statsContent.Marvelous.Text = `Marvelous: 0`;
+	statsContent.Perfect.Text = `Perfect: 0`;
+	statsContent.Great.Text = `Great: 0`;
+	statsContent.Ok.Text = `Ok: 0`;
+	statsContent.Bad.Text = `Bad: 0`;
+	statsContent.Misses.Text = `Misses: 0`;
+	statsContent.Accuracy.Text = `Accuracy: 0.000%`;
+	statsContent.HitError.Text = `Avg. Hit Error: +0.0ms, -0.0ms`;
+	statsContent.HighestCombo.Text = `Highest Combo: 0x / ${Utils.formatNumber(maxCombo)}x`;
+	statsContent.TotalScore.Text = `Total Score: 0 / ${Utils.formatNumber(maxScore)}`;
+	
+	statsContent.Accuracy.SetAttribute('Tooltip', `Full Accuracy: ${accuracy}%`);
 	
 	screenGui.StatsContainer.Position = new UDim2(-0.99, 0, 0.5, 0);
 	screenGui.StatsContainer.Visible = true;
@@ -1122,6 +1136,69 @@ export function showGrade(chart: Types.Chart, totalScore: number, notesMax: numb
 	}).Play();
 	
 	task.wait(infoOut.Time);
+	
+	let skipAnimation = false;
+	
+	const mouseClick = screenGui.StatsContainer.Close.MouseButton1Click.Connect(() => {
+		skipAnimation = true;
+	});
+	
+	const value = new Instance('NumberValue');
+	value.Value = 0;
+	
+	function empty(x: number, _=false) {
+		return x;
+	}
+	
+	function animateLabel(label: TextLabel, targetValue: number, formatted: boolean, rounded: boolean, formatString: string) {
+		if (targetValue === 0) {
+			label.Text = string.format(formatString, 0);
+			return;
+		}
+		
+		skipAnimation = false;
+		
+		const info = new TweenInfo(1, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out);
+		
+		value.Value = 0;
+		
+		const tween = TweenService.Create(value, info, {
+			Value: targetValue,
+		});
+		
+		tween.Play();
+		
+		const roundFunc = rounded ? math.round : empty;
+		const formatFunc = formatted ? Utils.formatNumber : empty;
+		
+		const startTime = os.clock();
+		while (os.clock() - startTime < info.Time) {
+			label.Text = string.format(formatString, tostring(formatFunc(roundFunc(value.Value), !rounded)));
+			if (skipAnimation) break;
+			
+			task.wait();
+		}
+		
+		label.Text = string.format(formatString, tostring(formatFunc(roundFunc(targetValue), !rounded)));
+		
+		tween.Destroy();
+		
+		if (!skipAnimation) task.wait(0.2);
+	}
+	
+	animateLabel(statsContent.Marvelous, notesMax, true, true, 'Marvelous: %d');
+	animateLabel(statsContent.Perfect, notes300, true, true, 'Perfect: %d');
+	animateLabel(statsContent.Great, notes300, true, true, 'Great: %d');
+	animateLabel(statsContent.Ok, notes300, true, true, 'Ok: %d');
+	animateLabel(statsContent.Bad, notes300, true, true, 'Bad: %d');
+	animateLabel(statsContent.Misses, notes300, true, true, 'Misses: %d');
+	animateLabel(statsContent.Accuracy, accuracy, false, false, 'Accuracy: %.3f%%');
+	animateLabel(statsContent.HitError, maxError, false, false, 'Avg. Hit Error: +%.1fms, -0.0ms');
+	animateLabel(statsContent.HitError, minError, false, false, `Avg. Hit Error: +${string.format('%.1f', maxError)}ms, -%.1fms`);
+	animateLabel(statsContent.HighestCombo, highestCombo, true, true, `Highest Combo: %sx / ${Utils.formatNumber(maxCombo)}`);
+	animateLabel(statsContent.TotalScore, totalScore, true, true, `Total Score: %s / ${Utils.formatNumber(maxScore)}`);
+	
+	mouseClick.Disconnect();
 	
 	screenGui.StatsContainer.Close.MouseButton1Click.Wait();
 	
@@ -1198,6 +1275,8 @@ export function startSongSelection() {
 						if (orderByAttribute) button.Name = `Item${item.GetAttribute('Order') ?? 0}`;
 						else button.Name = item.Name;
 						
+						button.TextSize = tonumber(Settings.LocalSettings.get(`TextSize${button.GetAttribute('TextSize')}` as keyof Types.PlayerSettings)) ?? button.TextSize;
+						
 						button.BackgroundColor3 = (category.GetAttribute('DefaultColor') as Color3 | undefined)
 							?? (item.GetAttribute('ItemColor') as Color3 | undefined)
 							?? defaultColor;
@@ -1215,6 +1294,8 @@ export function startSongSelection() {
 					button.Text = tostring(item.GetAttribute('Display') ?? item.Name);
 					if (orderByAttribute) button.Name = `Item${item.GetAttribute('Order') ?? 0}`;
 					else button.Name = item.Name;
+					
+					button.TextSize = tonumber(Settings.LocalSettings.get(`TextSize${button.GetAttribute('TextSize')}` as keyof Types.PlayerSettings)) ?? button.TextSize;
 					
 					button.BackgroundColor3 = (list.GetAttribute('DefaultColor') as Color3 | undefined)
 						?? (item.GetAttribute('ItemColor') as Color3 | undefined)

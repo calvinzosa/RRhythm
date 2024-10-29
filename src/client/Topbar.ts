@@ -48,8 +48,8 @@ export function disableMenu() {
 }
 
 export function enableMenu() {
-	Settings.unlock().deselect();
-	Profile.unlock().deselect();
-	Changelogs.unlock().deselect();
-	ShopDropdown.unlock().deselect();
+	Settings.deselect().unlock();
+	Profile.deselect().unlock();
+	Changelogs.deselect().unlock();
+	ShopDropdown.deselect().unlock();
 }

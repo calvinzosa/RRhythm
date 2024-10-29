@@ -4,27 +4,32 @@
 			"path": "src/shared/Types.ts",
 			"bookmarks": [
 				{
-					"line": 54,
+					"line": 21,
+					"column": 17,
+					"label": "Standard Types"
+				},
+				{
+					"line": 151,
 					"column": 21,
 					"label": "Replicated Storage"
 				},
 				{
-					"line": 78,
+					"line": 175,
 					"column": 17,
 					"label": "Profile Service Data"
 				},
 				{
-					"line": 110,
+					"line": 207,
 					"column": 9,
 					"label": "Models"
 				},
 				{
-					"line": 139,
+					"line": 236,
 					"column": 17,
 					"label": "User Interface"
 				},
 				{
-					"line": 540,
+					"line": 644,
 					"column": 18,
 					"label": "Gameplay"
 				}
@@ -34,72 +39,77 @@
 			"path": "src/client/MainGameplay.ts",
 			"bookmarks": [
 				{
-					"line": 98,
+					"line": 107,
 					"column": 36,
 					"label": "() Calculate Accuracy"
 				},
 				{
-					"line": 104,
+					"line": 114,
 					"column": 57,
 					"label": "() Calculate Difficulty"
 				},
 				{
-					"line": 198,
+					"line": 209,
 					"column": 36,
 					"label": "() Calculate Note Pixels/s"
 				},
 				{
-					"line": 205,
+					"line": 216,
 					"column": 82,
 					"label": "() Update HUD"
 				},
 				{
-					"line": 233,
+					"line": 244,
 					"column": 30,
 					"label": "() Calculate Note Position"
 				},
 				{
-					"line": 265,
+					"line": 276,
 					"column": 16,
 					"label": "() Hit Note"
 				},
 				{
-					"line": 330,
+					"line": 341,
 					"column": 22,
 					"label": "() Lane Pressed"
 				},
 				{
-					"line": 360,
+					"line": 371,
 					"column": 22,
 					"label": "() Lane Released"
 				},
 				{
-					"line": 434,
+					"line": 445,
 					"column": 33,
 					"label": "() Start Gameplay"
 				},
 				{
-					"line": 643,
+					"line": 654,
 					"column": 0,
 					"label": "() Gameplay Update"
 				},
 				{
-					"line": 993,
+					"line": 1004,
 					"column": 0,
 					"label": "() Finish Gameplay"
 				},
 				{
-					"line": 1146,
+					"line": 1080,
+					"column": 20,
+					"label": "() Show Grade"
+				},
+				{
+					"line": 1223,
 					"column": 38,
 					"label": "() Start Song Selection"
 				},
 				{
-					"line": 1328,
+					"line": 1409,
 					"column": 16,
 					"label": "() End Song Selection"
 				},
 				{
-					"line": 1355,
+					"line": 1436,
 					"column": 45,
 					"label": "() Update Stage Preview"
 				}

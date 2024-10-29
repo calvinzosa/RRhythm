@@ -4,7 +4,7 @@ import {
 	Workspace,
 } from '@rbxts/services';
 
-import { $print } from 'rbxts-transform-debug';
+import { $print, $warn } from 'rbxts-transform-debug';
 
 import * as Types from 'shared/Types';
 import { Constants } from 'shared/Constants';
@@ -59,7 +59,7 @@ eventsFolder.ChooseSong.OnServerInvoke = (player, song) => {
 	return false;
 }
 
-eventsFolder.UpdateSettings.OnServerInvoke = (player, settingName, settingValue) => {
+eventsFolder.UpdateSettings.OnServerInvoke = (<T extends keyof Types.PlayerSettings>(player: Player, settingName: T, settingValue: any) => {
 	if (!typeIs(settingName, 'string')) return undefined;
 	
 	const profile = PlayerData.LoadedProfiles.get(player);
@@ -67,22 +67,69 @@ eventsFolder.UpdateSettings.OnServerInvoke = (player, settingName, settingValue)
 	
 	if (!(settingName in profile.Data.PlayerSettings)) return undefined;
 	
-	const name = settingName as keyof Types.PlayerSettings;
-	let value = profile.Data.PlayerSettings[name];
+	const name = settingName as T;
 	const settingData = Types.PlayerSettingTypes[name];
 	
 	if (settingData.Type === 'int') {
 		if (!typeIs(settingValue, 'string')) return undefined;
 		
-		value = math.round(tonumber(settingValue) ?? tonumber(settingValue.gsub('[^%d]', '')) ?? value);
+		let filteredValue = math.round(tonumber(settingValue) ?? tonumber(settingValue.gsub('[^%d]', '')) ?? settingData.Default);
 		
-		if (typeIs(value, 'number')) {
-			if (settingData.Min !== undefined && value < settingData.Min) value = settingData.Min;
-			else if (settingData.Max !== undefined && value > settingData.Max) value = settingData.Max;
+		if (settingData.Min !== undefined && filteredValue < settingData.Min) filteredValue = settingData.Min;
+		else if (settingData.Max !== undefined && filteredValue > settingData.Max) filteredValue = settingData.Max;
+		
+		if (settingData.Filter !== undefined) {
+			try {
+				filteredValue = settingData.Filter(filteredValue);
+			} catch (err) {
+				$warn(`Error while trying to filter setting '${settingName}': ${err}`);
+			}
 		}
-	} else return undefined;
+		
+		(profile.Data.PlayerSettings[name] as typeof filteredValue) = filteredValue;
+		return filteredValue;
+	} else if (settingData.Type === 'float') {
+		if (!typeIs(settingValue, 'string')) return undefined;
+		
+		let filteredValue = tonumber(settingValue) ?? tonumber(settingValue.gsub('[^%d]', '')) ?? settingData.Default;
+		
+		if (settingData.Filter !== undefined) {
+			try {
+				filteredValue = settingData.Filter(filteredValue);
+			} catch (err) {
+				$warn(`Error while trying to filter setting '${settingName}': ${err}`);
+			}
+		}
+		
+		if (settingData.Min !== undefined && filteredValue < settingData.Min) filteredValue = settingData.Min;
+		else if (settingData.Max !== undefined && filteredValue > settingData.Max) filteredValue = settingData.Max;
+		
+		(profile.Data.PlayerSettings[name] as typeof filteredValue) = filteredValue;
+		return filteredValue;
+	} else if (settingData.Type === 'string') {
+		if (!typeIs(settingValue, 'string')) return undefined;
+		
+		let filteredValue = settingValue as string;
+		
+		if (settingData.MaxLength !== undefined) filteredValue = filteredValue.sub(1, settingData.MaxLength);
+		
+		if (settingData.AllowedCharacters !== undefined) {
+			for (const character of settingData.AllowedCharacters.split('')) {
+				filteredValue = filteredValue.gsub(character, '')[0];
+			}
+		}
+		
+		if (settingData.Filter !== undefined) {
+			try {
+				filteredValue = settingData.Filter(filteredValue);
+			} catch (err) {
+				$warn(`Error while trying to filter setting '${settingName}': ${err}`);
+			}
+		}
+		
+		(profile.Data.PlayerSettings[name] as typeof filteredValue) = filteredValue;
+		return filteredValue;
+	}
 	
-	profile.Data.PlayerSettings[name] = value;
-	
-	return value;
-}
+	return undefined;
+}) as (player: Player, ...args: Array<unknown>) => void;

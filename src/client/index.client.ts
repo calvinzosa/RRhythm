@@ -30,6 +30,14 @@ const screenGui = player.WaitForChild('PlayerGui').WaitForChild('ScreenGui') as 
 const eventsFolder = ReplicatedStorage.WaitForChild('Events') as Types.EventsFolder;
 const stagesFolder = Workspace.WaitForChild('Stages') as Folder;
 
+const textSizes = new Map<'S' | 'N' | 'M' | 'L' | 'XL', number>();
+
+textSizes.set('S', Settings.LocalSettings.get('TextSizeS') as number);
+textSizes.set('N', Settings.LocalSettings.get('TextSizeN') as number);
+textSizes.set('M', Settings.LocalSettings.get('TextSizeM') as number);
+textSizes.set('L', Settings.LocalSettings.get('TextSizeL') as number);
+textSizes.set('XL', Settings.LocalSettings.get('TextSizeXL') as number);
+
 let previousTextBounds: [GuiObject | undefined, Vector2 | undefined] = [undefined, undefined];
 
 $print(`Hello ${player.Name}!`);
@@ -78,9 +86,67 @@ function newStage(stage: Types.StageModel) {
 	}
 }
 
+function updateTextSizes() {
+	$print('Updating text sizes...');
+	
+	let updatedLabels = 0;
+	
+	for (const label of screenGui.GetDescendants()) {
+		if (label.IsA('TextLabel') || label.IsA('TextBox') || label.IsA('TextButton')) {
+			const textSize = label.GetAttribute('TextSize');
+			if (!typeIs(textSize, 'string')) continue;
+			
+			if (textSize === 'S' || textSize === 'N'|| textSize === 'M'|| textSize === 'L' || textSize === 'XL') {
+				const value = textSizes.get(textSize);
+				if (value !== undefined) {
+					label.TextSize = value;
+					updatedLabels++;
+				}
+			}
+		}
+	}
+	
+	$print(`Updated ${updatedLabels} text UIs`);
+}
+
 for (const stage of stagesFolder.GetDescendants()) {
 	if (stage.IsA('Model')) newStage(stage as Types.StageModel);
 }
+
+Settings.onSettingChanged('TextSizeS', (value) => {
+	if (textSizes.get('S') === value) return;
+	
+	textSizes.set('S', value);
+	updateTextSizes();
+});
+
+Settings.onSettingChanged('TextSizeN', (value) => {
+	if (textSizes.get('N') === value) return;
+	
+	textSizes.set('N', value);
+	updateTextSizes();
+});
+
+Settings.onSettingChanged('TextSizeM', (value) => {
+	if (textSizes.get('M') === value) return;
+	
+	textSizes.set('M', value);
+	updateTextSizes();
+});
+
+Settings.onSettingChanged('TextSizeL', (value) => {
+	if (textSizes.get('L') === value) return;
+	
+	textSizes.set('L', value);
+	updateTextSizes();
+});
+
+Settings.onSettingChanged('TextSizeXL', (value) => {
+	if (textSizes.get('XL') === value) return;
+	
+	textSizes.set('XL', value);
+	updateTextSizes();
+});
 
 stagesFolder.DescendantAdded.Connect((stage) => {
 	if (stage.IsA('Model')) newStage(stage as Types.StageModel);
@@ -153,6 +219,8 @@ UserInputService.InputChanged.Connect((input) => {
 });
 
 function toggleContainer(container: GuiObject, isSelected: boolean) {
+	container.SetAttribute('IsOpened', isSelected);
+	
 	if (isSelected) {
 		container.Position = new UDim2(0.5, 0, -1, 0);
 		container.Size = new UDim2(0.7, 0, 0.9, GuiService.TopbarInset.Height * -1.5);

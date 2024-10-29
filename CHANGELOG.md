@@ -1,9 +1,9 @@
 ## Changelog 10/28/2024
 
 ### Additions:
-- Added in-game viewable changelog, loads the markdown from the Github repository
-- Added settings interface
+- Added customizable text sizes (S, N, M, L, XL)
+- Added LaneWidth and NoteSpeed settings
 ### Changes:
-- Removed expandable topbar menu button
+- Stats container is smoothly animated and can be skipped by clicking the "Close" button a lot of times
 ### Bug Fixes:
-- Fixed tooltop text not wrapping correctly
+- `Utils.formatNumber()` now works with floats

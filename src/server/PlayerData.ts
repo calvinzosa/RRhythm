@@ -16,8 +16,13 @@ export const ProfileTemplate =  {
 	Tokens: 200,
 	OwnedItems: [] as Types.ProfileOwnedItem[],
 	PlayerSettings: {
-		LaneWidth: 70,
-		TextSize: 100,
+		TextSizeS: Types.PlayerSettingTypes.TextSizeS.Default,
+		TextSizeN: Types.PlayerSettingTypes.TextSizeN.Default,
+		TextSizeM: Types.PlayerSettingTypes.TextSizeM.Default,
+		TextSizeL: Types.PlayerSettingTypes.TextSizeL.Default,
+		TextSizeXL: Types.PlayerSettingTypes.TextSizeXL.Default,
+		LaneWidth: Types.PlayerSettingTypes.LaneWidth.Default,
+		NoteSpeed: Types.PlayerSettingTypes.NoteSpeed.Default,
 	} as Types.PlayerSettings,
 };
 
