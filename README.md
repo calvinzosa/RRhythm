@@ -1,3 +1,5 @@
+making this an app instead on roblox, so im archiving this
+
 # RRhythm
 
 [![Roblox RRhythm](https://img.shields.io/badge/Roblox%20RRhythm-blue?logo=Roblox)](https://www.roblox.com/games/81385631197440)
