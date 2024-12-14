@@ -1,4 +1,4 @@
-making this an app instead on roblox, so im archiving this
+making this an app instead of roblox, so im archiving this
 
 # RRhythm
 
